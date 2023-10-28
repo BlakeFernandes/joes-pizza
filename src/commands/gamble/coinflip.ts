@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction } from "discord.js";
+import {ChatInputCommandInteraction} from "discord.js";
 import * as bank from "../../bank/bank";
 import * as user from "../../user/user";
 
@@ -18,18 +18,28 @@ export async function coinFlip(
   }
 
   let result = Math.random() < 0.5 ? "heads" : "tails";
-  
+
   if (userId === "1167645797366648882") {
     result = Math.random() > 0.5 ? "heads" : "tails";
   }
 
-  const win = result === "heads" ? amount : -amount;
+  const isJackpot = Math.random() < 1 / 6000;
 
-  userBalanceMap.set(userId,(userBalanceMap.get(userId) ?? 0) + win);
+  let win;
+  if (isJackpot) {
+    win = 2 * amount;
+  } else {
+    win = result === "heads" ? amount : -amount;
+  }
+
+  userBalanceMap.set(userId, (userBalanceMap.get(userId) ?? 0) + win);
   userTimeMap.set(userId, Date.now());
 
   setInterval(() => {
-    if (userTimeMap.get(userId) && Date.now() - userTimeMap.get(userId)! > (1000 * 30)) {
+    if (
+      userTimeMap.get(userId) &&
+      Date.now() - userTimeMap.get(userId)! > 1000 * 30
+    ) {
       userTimeMap.delete(userId);
       userBalanceMap.delete(userId);
     }
@@ -41,9 +51,15 @@ export async function coinFlip(
     user.withdraw(userId, amount);
   }
 
-  if (userBalanceMap.has(userId)) {
+  if (isJackpot) {
     await message.reply(
-      `You flipped ${result} and ${win > 0 ? "won" : "lost"} ${amount} coins. ||(${userBalanceMap.get(userId)})||`
+      `🎉 JACKPOT! 🎉 You won ${win} coins! ||(${userBalanceMap.get(userId)})||`
+    );
+  } else if (userBalanceMap.has(userId)) {
+    await message.reply(
+      `You flipped ${result} and ${
+        win > 0 ? "won" : "lost"
+      } ${amount} coins. ||(${userBalanceMap.get(userId)})||`
     );
   } else {
     await message.reply(
