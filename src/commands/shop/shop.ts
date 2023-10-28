@@ -123,7 +123,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     if (price > currentBalance) {
       const missingAmount = price - currentBalance;
       await interaction.reply(
-        `Insufficient funds. You need $${missingAmount} more to buy ${shop.name}.`
+        `Insufficient funds. You need $${Math.round(missingAmount)} more to buy ${shop.name}.`
       );
       return;
     }

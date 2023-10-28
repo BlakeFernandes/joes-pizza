@@ -15,7 +15,7 @@ export async function coinFlip(
 
   if (!hasMoney) {
     const missingAmount = amount - currentBalance;
-    await message.reply(`Insufficient funds. You need ${missingAmount} more coins.`);
+    await message.reply(`Insufficient funds. You need ${Math.round(missingAmount)} more coins.`);
     return;
   }
 

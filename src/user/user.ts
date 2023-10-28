@@ -49,7 +49,7 @@ export async function withdraw(userId: string, amount: number): Promise<void> {
 
   if (user.wallet < amount) {
     const missingAmount = amount - user.wallet;
-    throw new Error(`Insufficient funds. You need ${missingAmount} more coins.`);
+    throw new Error(`Insufficient funds. You need ${Math.round(missingAmount)} more coins.`);
   }
 
   await prisma.user.update({
