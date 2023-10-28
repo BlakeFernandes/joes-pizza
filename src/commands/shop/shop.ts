@@ -1,4 +1,6 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { prisma } from "../../index";
+import { getBalance, withdraw } from "../../user/user";
 
 export const shopCommand = new SlashCommandBuilder()
   .setName("shop")
@@ -8,21 +10,37 @@ export const shopCommand = new SlashCommandBuilder()
       .setName("option")
       .setDescription("Option to execute")
       .setAutocomplete(true)
-);
+  )
+  .addStringOption((option) =>
+    option
+      .setName("type")
+      .setDescription("Select the shop type")
+      .setAutocomplete(true)
+      .setRequired(false)
+  );
 
 export type ShopData = {
+  id: number;
   name: string;
   price: number;
   priceExponent: number;
   incomePerSecond: number;
-}
-  
-const shops: ShopData[] = [
+};
+
+export const shops: ShopData[] = [
   {
+    id: 1,
     name: "Lemonade Stand",
     price: 1000,
     priceExponent: 1.15,
     incomePerSecond: 1,
+  },
+  {
+    id: 2,
+    name: "Bunnings Sausage Sizzle",
+    price: 50_000,
+    priceExponent: 1.5,
+    incomePerSecond: 10,
   },
 ];
 
@@ -31,15 +49,11 @@ export async function autocomplete(interaction) {
   let choices;
 
   if (focusedOption.name === "option") {
-    choices = [
-      "shop",
-      "buy",
-      "stats"
-    ];
+    choices = ["shop", "buy", "stats"];
   }
 
-  if (focusedOption.name === "version") {
-    choices = ["v9", "v11", "v12", "v13", "v14"];
+  if (focusedOption.name === "type") {
+    choices = shops.forEach((shop) => shop.name);
   }
 
   const filtered = choices.filter((choice) =>
@@ -54,16 +68,72 @@ export async function autocomplete(interaction) {
 export async function execute(interaction: ChatInputCommandInteraction) {
   const option = interaction.options.getString("option")!;
 
+  const userShops = await prisma.shop.findMany({
+    where: {
+      ownerId: interaction.user.id,
+    },
+  });
+
   if (option === "shop") {
     const embed = {
       title: "Shop",
       description: "Buy stuff to make more money!",
       fields: shops.map((shop) => ({
         name: shop.name,
-        value: `Price: ${shop.price}\nIncome Per Second: ${shop.incomePerSecond}`,
+        value: `Price: $${shop.price} (${
+          shop.priceExponent
+        }x)\nIncome Per Second: $${shop.incomePerSecond}\nOwned: ${
+          userShops.filter((userShop) => userShop.shopId === 1)[0]
+            ?.amountOwned ?? 0
+        }\nProfit: ${
+          userShops.filter((userShop) => userShop.shopId === 2)[0]
+            ?.profit ?? 0
+        }`,
       })),
     };
 
     await interaction.reply({ embeds: [embed] });
+  }
+
+  if (option === "buy") {
+    const type = interaction.options.getString("type")!;
+
+    const shop = shops.filter((shop) => shop.name === type)[0];
+
+    if (!type || !shop) {
+      await interaction.reply("Invalid shop type.");
+      return;
+    }
+
+    const userShop = userShops.filter((userShop) => userShop.shopId === shop.id)[0];
+    const amountOwned = userShop?.amountOwned ?? 0;
+
+    const price = shop.price * Math.pow(shop.priceExponent, amountOwned);
+
+    if (price > await getBalance(interaction.user.id)) {
+      await interaction.reply("Insufficient funds.");
+      return;
+    }
+
+    withdraw(interaction.user.id, price);
+
+    await prisma.shop.upsert({
+      where: {
+        shopId_ownerId: {
+          shopId: shop.id,
+          ownerId: interaction.user.id,
+        },
+      },
+      update: {
+        amountOwned: (userShop?.amountOwned ?? 0) + 1,
+      },
+      create: {
+        ownerId: interaction.user.id,
+        shopId: shop.id,
+        amountOwned: 1,
+      },
+    });
+
+    await interaction.reply(`You bought a ${shop.name} for $${price}.`);
   }
 }
