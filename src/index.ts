@@ -1,0 +1,175 @@
+import { PrismaClient } from "@prisma/client";
+import { Events, REST, Routes, userMention } from "discord.js";
+import { Client, GatewayIntentBits } from "discord.js";
+import { config } from "dotenv";
+
+import { create, getBalance, deposit, withdraw, hasMoney } from "./user/user";
+import { coinFlip } from "./commands/gamble/coinflip";
+import { execute } from "./commands/shop/shop";
+
+export const prisma = new PrismaClient();
+
+config();
+
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
+  ],
+});
+
+const commands = [
+  {
+    name: "ping",
+    description: "Replies with Pong!",
+  },
+  {
+    name: "coinflip",
+    description: "Flips a coin.",
+    options: [
+      {
+        name: "amount",
+        description: "The amount of coins to gamble.",
+        type: 4,
+        required: true,
+      },
+    ],
+  },
+  {
+    name: "balance",
+    description: "Shows your balance.",
+  },
+  {
+    name: "give",
+    description: "Gives someone coins.",
+    options: [
+      {
+        name: "user",
+        description: "The user to give coins to.",
+        type: 6,
+        required: true,
+      },
+      {
+        name: "amount",
+        description: "The amount of coins to give.",
+        type: 4,
+        required: true,
+      },
+    ],
+  },
+  {
+    name: "baltop",
+    description: "Shows the richest users.",
+  },
+  {
+    name: "shop",
+    description: "Shows the shop.",
+    options: [
+      {
+        name: "option",
+        description: "The option to select.",
+        type: 3,
+        required: true,
+        choices: [
+          {
+            name: "shop",
+            value: "shop",
+          },
+          {
+            name: "buy",
+            value: "buy",
+          },
+          {
+            name: "stats",
+            value: "stats",
+          },
+        ],
+      }
+    ]
+  }
+];
+
+client.on("ready", () => {
+  console.log(`Logged in as ${client.user.tag}!`);
+});
+
+client.on(Events.InteractionCreate, async (interaction) => {
+  if (interaction.isChatInputCommand()) {
+    if (!interaction.isChatInputCommand()) return;
+
+    await create(interaction.user.id);
+
+    if (interaction.commandName === "ping") {
+      await interaction.reply("Pong!");
+    }
+
+    if (interaction.commandName === "coinflip") {
+      const amount = interaction.options.getInteger("amount")!;
+      await coinFlip(interaction, interaction.user.id, amount);
+    }
+
+    if (interaction.commandName === "balance") {
+      const balance = await getBalance(interaction.user.id);
+
+      await interaction.reply(`Your balance is ${balance} coins.`);
+    }
+
+    if (interaction.commandName === "baltop") {
+      await interaction.reply("Fuck you this isn't implemented yet.");
+    }
+
+    if (interaction.commandName === "shop") {
+      await execute(interaction);
+    }
+
+    if (interaction.commandName === "give") {
+      const user = interaction.options.getUser("user")!;
+      const amount = interaction.options.getInteger("amount")!;
+
+      if (await hasMoney(interaction.user.id, amount)) {
+        await withdraw(interaction.user.id, amount);
+        await deposit(user.id, amount);
+
+        await interaction.reply(
+          `You gave ${userMention(user.id)} ${amount} coins.`
+        );
+      } else {
+        await interaction.reply("Insufficient funds.");
+        return;
+      }
+    }
+  } else if (interaction.isAutocomplete()) {
+    // const command = interaction.client.commands.get(interaction.commandName);
+
+    // if (!command) {
+    //   console.error(
+    //     `No command matching ${interaction.commandName} was found.`
+    //   );
+    //   return;
+    // }
+
+    // try {
+    //   await command.autocomplete(interaction);
+    // } catch (error) {
+    //   console.error(error);
+    // } 
+  }
+});
+
+(async () => {
+  client.login(process.env.TOKEN!);
+  const rest = new REST({ version: "10" }).setToken(process.env.TOKEN!);
+
+  try {
+    console.log("Started refreshing application (/) commands.");
+
+    await rest.put(Routes.applicationCommands(process.env.CLIENT_ID!), {
+      body: commands,
+    });
+
+    console.log("Successfully reloaded application (/) commands.");
+  } catch (error) {
+    console.error(error);
+  }
+})();

@@ -1,0 +1,44 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Bank {
+  id Int @id @default(autoincrement())
+
+  name    String
+  balance Float  @default(1000)
+  size    Int    @default(0)
+
+  owner   User   @relation(fields: [ownerId], references: [id])
+  ownerId String
+
+  @@unique([name, ownerId])
+}
+
+model User {
+  id     String @id
+  wallet Float  @default(100)
+
+  Bank  Bank[]
+  Shops Shop[]
+}
+
+model Shop {
+  id Int @id @default(autoincrement())
+
+  shopId      Int
+  amountOwned Int
+
+  owner   User   @relation(fields: [ownerId], references: [id])
+  ownerId String
+
+  @@unique([shopId, ownerId])
+}
