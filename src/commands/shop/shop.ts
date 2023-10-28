@@ -80,7 +80,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       description: "Buy stuff to make more money!",
       fields: shops.map((shop) => ({
         name: shop.name,
-        value: `Price: $${shop.price} (${
+        value: `Price: $${Math.round(shop.price)} (${
           shop.priceExponent
         }x)\nIncome Per Second: $${shop.incomePerSecond}\nOwned: ${
           userShops.filter((userShop) => userShop.shopId === 1)[0]
@@ -108,7 +108,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const userShop = userShops.filter((userShop) => userShop.shopId === shop.id)[0];
     const amountOwned = userShop?.amountOwned ?? 0;
 
-    const price = shop.price * Math.pow(shop.priceExponent, amountOwned);
+    const price = Math.round(shop.price * Math.pow(shop.priceExponent, amountOwned));
 
     if (price > await getBalance(interaction.user.id)) {
       await interaction.reply("Insufficient funds.");
@@ -134,6 +134,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       },
     });
 
-    await interaction.reply(`You bought a ${shop.name} for $${price}.`);
+    await interaction.reply(`You bought a ${shop.name} for $${Math.round(price)}.`);
   }
 }
