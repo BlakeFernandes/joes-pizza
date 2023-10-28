@@ -162,12 +162,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
       if (await hasMoney(interaction.user.id, amount)) {
         await withdraw(interaction.user.id, amount);
         await deposit(user.id, amount);
-
+    
         await interaction.reply(
           `You gave ${userMention(user.id)} ${amount} coins.`
         );
       } else {
-        await interaction.reply("Insufficient funds.");
+        const balance = await getBalance(interaction.user.id);
+        const missingAmount = amount - balance;
+        await interaction.reply(`Insufficient funds. You need ${missingAmount} more coins.`);
         return;
       }
     }

@@ -11,9 +11,11 @@ export async function coinFlip(
   amount: number
 ) {
   const hasMoney = await user.hasMoney(userId, amount);
+  const currentBalance = await user.getBalance(userId);
 
   if (!hasMoney) {
-    await message.reply("Insufficient funds.");
+    const missingAmount = amount - currentBalance;
+    await message.reply(`Insufficient funds. You need ${missingAmount} more coins.`);
     return;
   }
 

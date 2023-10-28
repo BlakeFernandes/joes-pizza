@@ -1,6 +1,10 @@
-import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder } from "discord.js";
-import { prisma } from "../../index";
-import { getBalance, withdraw } from "../../user/user";
+import {
+  ChatInputCommandInteraction,
+  EmbedBuilder,
+  SlashCommandBuilder,
+} from "discord.js";
+import {prisma} from "../../index";
+import {getBalance, withdraw} from "../../user/user";
 
 export const shopCommand = new SlashCommandBuilder()
   .setName("shop")
@@ -61,7 +65,7 @@ export async function autocomplete(interaction) {
   );
 
   await interaction.respond(
-    filtered.map((choice) => ({ name: choice, value: choice }))
+    filtered.map((choice) => ({name: choice, value: choice}))
   );
 }
 
@@ -80,21 +84,24 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       .setDescription("Buy stuff to make more money!");
 
     for (const shop of shops) {
-      const userShop = userShops.filter((userShop) => userShop.shopId === shop.id)[0];
-      const price = shop.price * Math.pow(shop.priceExponent, userShop?.amountOwned ?? 1);
-      const incomePerSecond = shop.incomePerSecond * (userShop?.amountOwned ?? 0);
+      const userShop = userShops.filter(
+        (userShop) => userShop.shopId === shop.id
+      )[0];
+      const price =
+        shop.price * Math.pow(shop.priceExponent, userShop?.amountOwned ?? 1);
+      const incomePerSecond =
+        shop.incomePerSecond * (userShop?.amountOwned ?? 0);
 
       embed.addFields({
         name: shop.name,
-        value:
-        `Price: $${price} ($${shop.price} @ x${shop.priceExponent}) 
+        value: `Price: $${price} ($${shop.price} @ x${shop.priceExponent}) 
         Income Per Second: $${incomePerSecond} ($${shop.incomePerSecond})
         Owned: ${userShop?.amountOwned ?? 0}
         Profit: $${userShop?.profit ?? 0}`,
       });
     }
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({embeds: [embed]});
   }
 
   if (option === "buy") {
@@ -111,9 +118,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const amountOwned = userShop?.amountOwned ?? 0;
 
     const price = Math.round(shop.price * Math.pow(shop.priceExponent, amountOwned));
+    const currentBalance = await getBalance(interaction.user.id);
 
-    if (price > await getBalance(interaction.user.id)) {
-      await interaction.reply("Insufficient funds.");
+    if (price > currentBalance) {
+      const missingAmount = price - currentBalance;
+      await interaction.reply(
+        `Insufficient funds. You need $${missingAmount} more to buy ${shop.name}.`
+      );
       return;
     }
 

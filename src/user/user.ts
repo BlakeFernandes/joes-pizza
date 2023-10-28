@@ -47,8 +47,9 @@ export async function withdraw(userId: string, amount: number): Promise<void> {
 
   const user = await prisma.user.findUnique({where: {id: userId}});
 
-  if (user && user.wallet < amount) {
-    throw new Error("Insufficient funds.");
+  if (user.wallet < amount) {
+    const missingAmount = amount - user.wallet;
+    throw new Error(`Insufficient funds. You need ${missingAmount} more coins.`);
   }
 
   await prisma.user.update({
