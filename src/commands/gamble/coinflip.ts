@@ -2,6 +2,9 @@ import { ChatInputCommandInteraction } from "discord.js";
 import * as bank from "../../bank/bank";
 import * as user from "../../user/user";
 
+const userTimeMap = new Map<string, number>();
+const userBalanceMap = new Map<string, number>();
+
 export async function coinFlip(
   message: ChatInputCommandInteraction,
   userId: string,
@@ -22,11 +25,29 @@ export async function coinFlip(
 
   const win = result === "heads" ? amount : -amount;
 
+  userBalanceMap.set(userId,(userBalanceMap.get(userId) ?? 0) + win);
+  userTimeMap.set(userId, Date.now());
+
+  setInterval(() => {
+    if (userTimeMap.get(userId) && Date.now() - userTimeMap.get(userId)! > (1000 * 30)) {
+      userTimeMap.delete(userId);
+      userBalanceMap.delete(userId);
+    }
+  }, 1000 * 30);
+
   if (win > 0) {
     user.deposit(userId, amount);
   } else {
     user.withdraw(userId, amount);
   }
 
-  await message.reply(`You flipped ${result} and ${win > 0 ? "won" : "lost"} ${amount} coins.`)
+  if (userBalanceMap.has(userId)) {
+    await message.reply(
+      `You flipped ${result} and ${win > 0 ? "won" : "lost"} ${amount} coins. ||(${userBalanceMap.get(userId)})||`
+    );
+  } else {
+    await message.reply(
+      `You flipped ${result} and ${win > 0 ? "won" : "lost"} ${amount} coins.`
+    );
+  }
 }

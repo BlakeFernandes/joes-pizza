@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder } from "discord.js";
 import { prisma } from "../../index";
 import { getBalance, withdraw } from "../../user/user";
 
@@ -75,22 +75,24 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   });
 
   if (option === "shop") {
-    const embed = {
-      title: "Shop",
-      description: "Buy stuff to make more money!",
-      fields: shops.map((shop) => ({
+    const embed = new EmbedBuilder()
+      .setTitle("Shop")
+      .setDescription("Buy stuff to make more money!");
+
+    for (const shop of shops) {
+      const userShop = userShops.filter((userShop) => userShop.shopId === shop.id)[0];
+      const price = shop.price * Math.pow(shop.priceExponent, userShop?.amountOwned ?? 1);
+      const incomePerSecond = shop.incomePerSecond * (userShop?.amountOwned ?? 0);
+
+      embed.addFields({
         name: shop.name,
-        value: `Price: $${Math.round(shop.price)} (${
-          shop.priceExponent
-        }x)\nIncome Per Second: $${shop.incomePerSecond}\nOwned: ${
-          userShops.filter((userShop) => userShop.shopId === shop.id)[0]
-            ?.amountOwned ?? 0
-        }\nProfit: ${
-          userShops.filter((userShop) => userShop.shopId === shop.id)[0]
-            ?.profit ?? 0
-        }`,
-      })),
-    };
+        value:
+        `Price: $${price} ($${shop.price} @ x${shop.priceExponent}) 
+        Income Per Second: $${incomePerSecond} ($${shop.incomePerSecond})
+        Owned: ${userShop?.amountOwned ?? 0}
+        Profit: $${userShop?.profit ?? 0}`,
+      });
+    }
 
     await interaction.reply({ embeds: [embed] });
   }
