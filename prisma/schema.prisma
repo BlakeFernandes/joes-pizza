@@ -6,8 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = "postgresql://yes:yes@localhost:5432/yes"
 }
 
 model Bank {
@@ -36,6 +36,7 @@ model Shop {
 
   shopId      Int
   amountOwned Int
+  profit      Int @default(0)
 
   owner   User   @relation(fields: [ownerId], references: [id])
   ownerId String

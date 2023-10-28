@@ -12,7 +12,7 @@ import {
   getTopBalances,
 } from "./user/user";
 import {coinFlip} from "./commands/gamble/coinflip";
-import {execute} from "./commands/shop/shop";
+import {execute, shops} from "./commands/shop/shop";
 
 export const prisma = new PrismaClient();
 
@@ -90,6 +90,22 @@ const commands = [
           {
             name: "stats",
             value: "stats",
+          },
+        ],
+      },
+      {
+        name: "type",
+        description: "The type of item to buy.",
+        type: 3,
+        required: false,
+        choices: [
+          {
+            name: "Lemonade Stand",
+            value: "Lemonade Stand",
+          },
+          {
+            name: "Bunnings Sausage Sizzle",
+            value: "Bunnings Sausage Sizzle",
           },
         ],
       },
@@ -171,7 +187,35 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
 (async () => {
   client.login(process.env.TOKEN!);
-  const rest = new REST({version: "10"}).setToken(process.env.TOKEN!);
+  const rest = new REST({ version: "10" }).setToken(process.env.TOKEN!);
+  
+  setInterval(async () => {
+    const userShops = await prisma.shop.findMany();
+    userShops.forEach(async (userShop) => {
+      const user = userShop.ownerId;
+      const amountOwned = userShop.amountOwned;
+      const incomePerSecond = shops.filter((shop2) => shop2.id === userShop.shopId)[0].incomePerSecond;
+
+      const out = amountOwned * incomePerSecond;
+
+      if (out > 0) {
+        await deposit(user, out);
+        await prisma.shop.update({
+          where: {
+            shopId_ownerId: {
+              ownerId: user,
+              shopId: userShop.shopId,
+            },
+          },
+          data: {
+            profit: {
+              increment: out,
+            },
+          },
+        });
+      }
+    })
+  }, 1000)
 
   try {
     console.log("Started refreshing application (/) commands.");
