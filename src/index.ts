@@ -1,11 +1,18 @@
-import { PrismaClient } from "@prisma/client";
-import { Events, REST, Routes, userMention } from "discord.js";
-import { Client, GatewayIntentBits } from "discord.js";
-import { config } from "dotenv";
+import {PrismaClient} from "@prisma/client";
+import {Events, REST, Routes, userMention} from "discord.js";
+import {Client, GatewayIntentBits} from "discord.js";
+import {config} from "dotenv";
 
-import { create, getBalance, deposit, withdraw, hasMoney } from "./user/user";
-import { coinFlip } from "./commands/gamble/coinflip";
-import { execute } from "./commands/shop/shop";
+import {
+  create,
+  getBalance,
+  deposit,
+  withdraw,
+  hasMoney,
+  getTopBalances,
+} from "./user/user";
+import {coinFlip} from "./commands/gamble/coinflip";
+import {execute} from "./commands/shop/shop";
 
 export const prisma = new PrismaClient();
 
@@ -15,7 +22,7 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent,
   ],
 });
 
@@ -85,9 +92,9 @@ const commands = [
             value: "stats",
           },
         ],
-      }
-    ]
-  }
+      },
+    ],
+  },
 ];
 
 client.on("ready", () => {
@@ -116,7 +123,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 
     if (interaction.commandName === "baltop") {
-      await interaction.reply("Fuck you this isn't implemented yet.");
+      const topUsers = await getTopBalances();
+      let response = "**Top Users by Balance:**\n";
+
+      topUsers.forEach((user, index) => {
+        response += `${index + 1}. <@${user.id}>: ${user.wallet} coins\n`;
+      });
+
+      await interaction.reply(response);
     }
 
     if (interaction.commandName === "shop") {
@@ -141,25 +155,23 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
   } else if (interaction.isAutocomplete()) {
     // const command = interaction.client.commands.get(interaction.commandName);
-
     // if (!command) {
     //   console.error(
     //     `No command matching ${interaction.commandName} was found.`
     //   );
     //   return;
     // }
-
     // try {
     //   await command.autocomplete(interaction);
     // } catch (error) {
     //   console.error(error);
-    // } 
+    // }
   }
 });
 
 (async () => {
   client.login(process.env.TOKEN!);
-  const rest = new REST({ version: "10" }).setToken(process.env.TOKEN!);
+  const rest = new REST({version: "10"}).setToken(process.env.TOKEN!);
 
   try {
     console.log("Started refreshing application (/) commands.");
