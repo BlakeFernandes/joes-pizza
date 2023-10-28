@@ -134,8 +134,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     if (interaction.commandName === "balance") {
       const balance = await getBalance(interaction.user.id);
+      const roundedBalance = Math.round(balance);
 
-      await interaction.reply(`Your balance is ${balance} coins.`);
+      await interaction.reply(`Your balance is ${roundedBalance} coins.`);
     }
 
     if (interaction.commandName === "baltop") {
@@ -143,7 +144,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
       let response = "**Top Users by Balance:**\n";
 
       topUsers.forEach((user, index) => {
-        response += `${index + 1}. <@${user.id}>: ${user.wallet} coins\n`;
+        const roundedBalance = Math.round(user.wallet);
+        response += `${index + 1}. <@${user.id}>: ${roundedBalance} coins\n`;
       });
 
       await interaction.reply(response);
