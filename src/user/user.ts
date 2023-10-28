@@ -1,7 +1,10 @@
-import { prisma } from "..";
+import {prisma} from "..";
 
-export async function hasMoney(userId: string, amount: number): Promise<boolean> {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+export async function hasMoney(
+  userId: string,
+  amount: number
+): Promise<boolean> {
+  const user = await prisma.user.findUnique({where: {id: userId}});
 
   if (!user) {
     return false;
@@ -17,7 +20,7 @@ export async function create(userId: string): Promise<void> {
     },
     update: {},
     create: {
-      id: userId
+      id: userId,
     },
   });
 }
@@ -28,7 +31,7 @@ export async function deposit(userId: string, amount: number): Promise<void> {
   }
 
   await prisma.user.update({
-    where: { id: userId },
+    where: {id: userId},
     data: {
       wallet: {
         increment: amount,
@@ -42,14 +45,14 @@ export async function withdraw(userId: string, amount: number): Promise<void> {
     throw new Error("Withdraw amount should be greater than 0.");
   }
 
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  
+  const user = await prisma.user.findUnique({where: {id: userId}});
+
   if (user && user.wallet < amount) {
     throw new Error("Insufficient funds.");
   }
 
   await prisma.user.update({
-    where: { id: userId },
+    where: {id: userId},
     data: {
       wallet: {
         decrement: amount,
@@ -59,11 +62,26 @@ export async function withdraw(userId: string, amount: number): Promise<void> {
 }
 
 export async function getBalance(userId: string): Promise<number> {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const user = await prisma.user.findUnique({where: {id: userId}});
 
   if (!user) {
     throw new Error("User not found.");
   }
 
   return user.wallet;
+}
+
+export async function getTopBalances(
+  limit: number = 10
+): Promise<{id: string; wallet: number}[]> {
+  return prisma.user.findMany({
+    orderBy: {
+      wallet: "desc",
+    },
+    take: limit,
+    select: {
+      id: true,
+      wallet: true,
+    },
+  });
 }
