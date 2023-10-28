@@ -83,10 +83,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         value: `Price: $${shop.price} (${
           shop.priceExponent
         }x)\nIncome Per Second: $${shop.incomePerSecond}\nOwned: ${
-          userShops.filter((userShop) => userShop.shopId === 1)[0]
+          userShops.filter((userShop) => userShop.shopId === shop.id)[0]
             ?.amountOwned ?? 0
         }\nProfit: ${
-          userShops.filter((userShop) => userShop.shopId === 2)[0]
+          userShops.filter((userShop) => userShop.shopId === shop.id)[0]
             ?.profit ?? 0
         }`,
       })),
