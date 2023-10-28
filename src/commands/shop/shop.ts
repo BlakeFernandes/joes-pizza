@@ -88,7 +88,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         (userShop) => userShop.shopId === shop.id
       )[0];
       const price =
-        shop.price * Math.pow(shop.priceExponent, userShop?.amountOwned ?? 1);
+      Math.round(shop.price * Math.pow(shop.priceExponent, userShop?.amountOwned ?? 1));
       const incomePerSecond =
         shop.incomePerSecond * (userShop?.amountOwned ?? 0);
 
