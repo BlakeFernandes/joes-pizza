@@ -73,7 +73,7 @@ async function getBalance(userId: string): Promise<number> {
 
 async function getTopBalances(
   limit: number = 10
-): Promise<{ id: string; wallet: number }[]> {
+) {
   return prisma.user.findMany({
     orderBy: {
       wallet: "desc",
@@ -82,6 +82,7 @@ async function getTopBalances(
     select: {
       id: true,
       wallet: true,
+      level: true,
     },
   });
 }

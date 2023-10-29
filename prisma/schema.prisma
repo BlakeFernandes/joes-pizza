@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,36 +8,32 @@ datasource db {
 }
 
 model Bank {
-  id Int @id @default(autoincrement())
-
+  id      Int    @id @default(autoincrement())
   name    String
   balance Float  @default(1000)
   size    Int    @default(0)
-
-  owner   User   @relation(fields: [ownerId], references: [id])
   ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id])
 
   @@unique([name, ownerId])
 }
 
 model User {
   id     String @id
-  wallet Float  @default(100)
-  level Int    @default(0)
+  wallet Int  @default(100)
+  level Int @default(0)
 
-  Bank  Bank[]
-  Shops Shop[]
+  Bank   Bank[]
+  Shops  Shop[]
 }
 
 model Shop {
-  id Int @id @default(autoincrement())
-
+  id          Int    @id @default(autoincrement())
   shopId      Int
   amountOwned Int
-  profit      Int @default(0)
-
-  owner   User   @relation(fields: [ownerId], references: [id])
-  ownerId String
+  ownerId     String
+  profit      Int    @default(0)
+  owner       User   @relation(fields: [ownerId], references: [id])
 
   @@unique([shopId, ownerId])
 }

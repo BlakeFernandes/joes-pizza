@@ -39,12 +39,14 @@ const bankCommand: SlashCommand = {
     const focusedOption = interaction.options.getFocused(true);
     let choices;
 
+    console.log(focusedOption.name);
+
     if (focusedOption.name === "option") {
-      choices = ["list"];
+      choices = ["view", "list"];
     }
 
     if (focusedOption.name === "type") {
-      choices = banks.forEach((shop) => shop.name);
+      choices = banks.map((bank) => bank.name);
     }
 
     const filtered = choices.filter((choice) =>
@@ -58,6 +60,10 @@ const bankCommand: SlashCommand = {
   execute: async (interaction) => {
     const option = interaction.options.getString("option")!;
 
+    if (option === "view") {
+
+    }
+
     if (option === "list") {
       const embed = new EmbedBuilder()
         .setTitle("bank")
@@ -67,8 +73,8 @@ const bankCommand: SlashCommand = {
 
       for (const bank of banks) {
         embed.addFields({
-          name: bank.name,
-          value: `Price: ${bank.price} coins\nMax Balance: ${bank.maxBalance} coins\nMax Compound: ${bank.maxCompound} coins`,
+            name: `${bank.name} 🍕${bank.price}`,
+            value: `Max Balance: ${bank.maxBalance} coins\nMax Interest: ${bank.maxCompound} coins`,
         });
       }
 

@@ -12,10 +12,10 @@ const baltopCommand: SlashCommand = {
 
       topUsers.forEach((user, index) => {
           const roundedBalance = Math.round(user.wallet);
-          response += `${index + 1}. <@${user.id}>: ${roundedBalance} coins\n`;
+          response += `${index + 1}. <@${user.id}>: ${roundedBalance} coins \`\`🍕${user.level}\`\`\n`;
       });
 
-      await interaction.reply(response);
+      await interaction.reply({ content: response, allowedMentions: { repliedUser: true } });
     }
 }
 

@@ -1,9 +1,4 @@
-import {
-  Client,
-  GatewayIntentBits,
-  Collection,
-  PermissionFlagsBits,
-} from "discord.js";
+import { Client, GatewayIntentBits, Collection, PermissionFlagsBits, ActivityType } from "discord.js";
 const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
 });
@@ -23,8 +18,25 @@ client.cooldowns = new Collection<string, number>();
 
 const handlersDir = join(__dirname, "./handlers");
 readdirSync(handlersDir).forEach((handler) => {
-  if (!handler.endsWith(".js")) return;
-  require(`${handlersDir}/${handler}`)(client);
+    if (!handler.endsWith(".js")) return;
+    require(`${handlersDir}/${handler}`)(client);
 });
+
+setInterval(async () => {
+    const totalCoins = await prisma.user.aggregate({
+        _sum: {
+            wallet: true,
+        },
+    });
+    client.user.setPresence({
+        activities: [
+            {
+                name: `${totalCoins._sum.wallet.toString()} coins across users!`,
+                type: ActivityType.Watching,
+            },
+        ],
+        status: "online",
+    });
+}, 60000);
 
 client.login(process.env.TOKEN);

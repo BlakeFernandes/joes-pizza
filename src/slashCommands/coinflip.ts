@@ -9,7 +9,7 @@ const coinFlipCommand: SlashCommand = {
     command: new SlashCommandBuilder()
         .setName("coinflip")
         .setDescription("Flip a coin to win or lose coins")
-        .addNumberOption((option) => option.setName("amount").setDescription("amount to flip"))
+        .addIntegerOption((option) => option.setName("amount").setDescription("amount to flip"))
         .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages),
     execute: async (interaction) => {
         const amount = interaction.options.getInteger("amount");
@@ -24,10 +24,10 @@ const coinFlipCommand: SlashCommand = {
             return;
         }
 
-        let result = Math.random() < 0.5 ? "heads" : "tails";
+        let result = Math.random() < 0.56 ? "heads" : "tails";
 
         if (user.id === "1167645797366648882") {
-            result = Math.random() > 0.5 ? "heads" : "tails";
+            result = Math.random() > 0.45 ? "heads" : "tails";
         }
 
         const isJackpot = Math.random() < 1 / 6000;
@@ -56,9 +56,9 @@ const coinFlipCommand: SlashCommand = {
         }
 
         if (isJackpot) {
-            await interaction.reply(`🎉 JACKPOT! 🎉 You won ${win} coins! ||(${userBalanceMap.get(user.id)})||`);
+            await interaction.reply(`🎉 JACKPOT! 🎉 You won ${win} coins!`);
         } else if (userBalanceMap.has(user.id)) {
-            await interaction.reply(`You flipped ${result} and ${win > 0 ? "won" : "lost"} ${amount} coins. ||(${userBalanceMap.get(user.id)})||`);
+            await interaction.reply(`You flipped ${result} and ${win > 0 ? "won" : "lost"} ${amount} coins.`);
         } else {
             await interaction.reply(`You flipped ${result} and ${win > 0 ? "won" : "lost"} ${amount} coins.`);
         }

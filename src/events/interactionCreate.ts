@@ -1,9 +1,12 @@
 import { Interaction } from "discord.js";
 import { BotEvent } from "../types";
+import joeUser from "~/internal/joeUser";
 
 const event: BotEvent = {
   name: "interactionCreate",
-  execute: (interaction: Interaction) => {
+  execute: async (interaction: Interaction) => {
+    await joeUser.create(interaction.user.id);
+    
     if (interaction.isChatInputCommand()) {
       let command = interaction.client.slashCommands.get(
         interaction.commandName
