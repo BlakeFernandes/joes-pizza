@@ -80,30 +80,80 @@ const shopCommand: SlashCommand = {
             await interaction.reply({ embeds: [embed] });
         }
 
+        // if (option === "buy") {
+        //     const type = interaction.options.getString("type")!;
+
+        //     const shop = shops.filter((shop) => shop.name === type)[0];
+
+        //     if (!type || !shop) {
+        //         await interaction.reply("Invalid shop type.");
+        //         return;
+        //     }
+
+        //     const userShop = userShops.filter((userShop) => userShop.shopId === shop.id)[0];
+        //     const amountOwned = userShop?.amountOwned ?? 0;
+
+        //     const price = Math.round(shop.price * Math.pow(shop.priceExponent, amountOwned));
+        //     const currentBalance = await joeUser.getBalance(interaction.user.id);
+
+        //     if (price > currentBalance) {
+        //         const missingAmount = price - currentBalance;
+        //         await interaction.reply(`Insufficient funds. You need $${Math.round(missingAmount)} more to buy ${shop.name}.`);
+        //         return;
+        //     }
+
+        //     joeUser.withdraw(interaction.user.id, price);
+
+        //     await prisma.shop.upsert({
+        //         where: {
+        //             shopId_ownerId: {
+        //                 shopId: shop.id,
+        //                 ownerId: interaction.user.id,
+        //             },
+        //         },
+        //         update: {
+        //             amountOwned: (userShop?.amountOwned ?? 0) + 1,
+        //         },
+        //         create: {
+        //             ownerId: interaction.user.id,
+        //             shopId: shop.id,
+        //             amountOwned: 1,
+        //         },
+        //     });
+
+        //     await interaction.reply(`You bought a ${shop.name} for $${Math.round(price)}.`);
+        // }
+
         if (option === "buy") {
             const type = interaction.options.getString("type")!;
-
+            const quantity = interaction.options.getInteger("quantity") || 1; // Defaults to 1 if no quantity specified
+        
             const shop = shops.filter((shop) => shop.name === type)[0];
-
+        
             if (!type || !shop) {
                 await interaction.reply("Invalid shop type.");
                 return;
             }
-
+        
             const userShop = userShops.filter((userShop) => userShop.shopId === shop.id)[0];
             const amountOwned = userShop?.amountOwned ?? 0;
-
-            const price = Math.round(shop.price * Math.pow(shop.priceExponent, amountOwned));
+        
+            // Calculate total price for the desired quantity
+            let totalPrice = 0;
+            for (let i = 0; i < quantity; i++) {
+                totalPrice += Math.round(shop.price * Math.pow(shop.priceExponent, amountOwned + i));
+            }
+        
             const currentBalance = await joeUser.getBalance(interaction.user.id);
-
-            if (price > currentBalance) {
-                const missingAmount = price - currentBalance;
-                await interaction.reply(`Insufficient funds. You need $${Math.round(missingAmount)} more to buy ${shop.name}.`);
+        
+            if (totalPrice > currentBalance) {
+                const missingAmount = totalPrice - currentBalance;
+                await interaction.reply(`Insufficient funds. You need $${Math.round(missingAmount)} more to buy ${quantity} ${shop.name}(s).`);
                 return;
             }
-
-            joeUser.withdraw(interaction.user.id, price);
-
+        
+            joeUser.withdraw(interaction.user.id, totalPrice);
+        
             await prisma.shop.upsert({
                 where: {
                     shopId_ownerId: {
@@ -112,17 +162,18 @@ const shopCommand: SlashCommand = {
                     },
                 },
                 update: {
-                    amountOwned: (userShop?.amountOwned ?? 0) + 1,
+                    amountOwned: (userShop?.amountOwned ?? 0) + quantity,
                 },
                 create: {
                     ownerId: interaction.user.id,
                     shopId: shop.id,
-                    amountOwned: 1,
+                    amountOwned: quantity,
                 },
             });
-
-            await interaction.reply(`You bought a ${shop.name} for $${Math.round(price)}.`);
+        
+            await interaction.reply(`You bought ${quantity} ${shop.name}(s) for $${Math.round(totalPrice)}.`);
         }
+        
     },
 };
 
