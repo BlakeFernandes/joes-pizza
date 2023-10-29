@@ -24,10 +24,10 @@ const coinFlipCommand: SlashCommand = {
             return;
         }
 
-        let result = Math.random() < 0.56 ? "heads" : "tails";
+        let result = Math.random() < 0.51 ? "heads" : "tails";
 
         if (user.id === "1167645797366648882") {
-            result = Math.random() > 0.45 ? "heads" : "tails";
+            result = Math.random() > 0.49 ? "heads" : "tails";
         }
 
         const isJackpot = Math.random() < 1 / 6000;

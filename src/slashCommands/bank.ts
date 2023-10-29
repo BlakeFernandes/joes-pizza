@@ -1,87 +1,194 @@
-import {
-  ChatInputCommandInteraction,
-  EmbedBuilder,
-  PermissionFlagsBits,
-  SlashCommandBuilder,
-} from "discord.js";
+import { ChatInputCommandInteraction, EmbedBuilder, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { SlashCommand } from "~/types";
+import { prisma } from "..";
+import joeUser from "~/internal/joeUser";
+import joeBank from "~/internal/joeBank";
 
 export type BankData = {
-  id: number;
-  name: string;
-  price: number;
-  maxBalance;
-  maxCompound;
+    id: number;
+    name: string;
+    levelRequired: number;
+    maxBalance;
+    maxCompound;
 };
 
 export const banks: BankData[] = [
-  {
-    id: 1,
-    name: "ANZ",
-    price: 100,
-    maxBalance: 10000,
-    maxCompound: 0.05,
-  },
+    {
+        id: 1,
+        name: "ANZ",
+        levelRequired: 10,
+        maxBalance: 10000,
+        maxCompound: 0.05,
+    },
 ];
 
 const bankCommand: SlashCommand = {
-  command: new SlashCommandBuilder()
-    .setName("bank")
-    .setDescription("View Banks")
-    .addStringOption((option) =>
-      option
-        .setName("option")
-        .setDescription("Option to execute")
-        .setAutocomplete(true)
-    )
-    .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages),
-  autocomplete: async (interaction) => {
-    const focusedOption = interaction.options.getFocused(true);
-    let choices;
+    command: new SlashCommandBuilder()
+        .setName("bank")
+        .setDescription("View Banks")
+        .addSubcommand((subcommand) =>
+            subcommand
+                .setName("deposit")
+                .setDescription("Deposit coins")
+                .addStringOption((option) => option.setName("bank_name").setDescription("Name of Bank").setRequired(true).setAutocomplete(true))
+                .addIntegerOption((option) => option.setName("amount").setDescription("amount to deposit").setRequired(true))
+        )
+        .addSubcommand((subcommand) =>
+            subcommand
+                .setName("withdraw")
+                .setDescription("Withdraw coins")
+                .addStringOption((option) => option.setName("bank_name").setDescription("Name of Bank").setRequired(true).setAutocomplete(true))
+                .addIntegerOption((option) => option.setName("amount").setDescription("amount to withdraw").setRequired(true))
+        )
+        .addSubcommand((subcommand) =>
+            subcommand
+                .setName("join")
+                .setDescription("Join a bank")
+                .addStringOption((option) => option.setName("bank_name").setDescription("Name of Bank").setRequired(true).setAutocomplete(true))
+        )
+        .addSubcommand((subcommand) => subcommand.setName("stats").setDescription("View your bank stats"))
+        .addSubcommand((subcommand) => subcommand.setName("list").setDescription("View all banks"))
+        .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages),
+    autocomplete: async (interaction) => {
+        const focusedOption = interaction.options.getFocused(true);
+        let choices;
 
-    console.log(focusedOption.name);
+        if (focusedOption.name === "bank_name") {
+            const userBank = await prisma.bank.findMany({
+                where: {
+                    ownerId: interaction.user.id,
+                },
+            });
 
-    if (focusedOption.name === "option") {
-      choices = ["view", "list"];
-    }
+            choices = banks.filter((bank) => !userBank.find((userBank) => userBank.bankId === bank.id)).map((bank) => bank.name);
+        }
 
-    if (focusedOption.name === "type") {
-      choices = banks.map((bank) => bank.name);
-    }
+        const filtered = choices.filter((choice) => choice.startsWith(focusedOption.value));
 
-    const filtered = choices.filter((choice) =>
-      choice.startsWith(focusedOption.value)
-    );
+        await interaction.respond(filtered.map((choice) => ({ name: choice, value: choice })));
+    },
+    execute: async (interaction) => {
+        const option = interaction.options.getSubcommand()!;
 
-    await interaction.respond(
-      filtered.map((choice) => ({ name: choice, value: choice }))
-    );
-  },
-  execute: async (interaction) => {
-    const option = interaction.options.getString("option")!;
+        if (option === "join") {
+            const bankName = interaction.options.getString("bank_name")!;
 
-    if (option === "view") {
+            const bank = banks.find((bank) => bank.name === bankName)!;
 
-    }
+            const userBank = await prisma.bank.findUnique({
+                where: {
+                    bankId_ownerId: {
+                        ownerId: interaction.user.id,
+                        bankId: bank.id,
+                    },
+                },
+            });
 
-    if (option === "list") {
-      const embed = new EmbedBuilder()
-        .setTitle("bank")
-        .setDescription(
-          "Join a bank to store your money, earn interest and get loans."
-        );
+            if (userBank) {
+                await interaction.reply(`You already have a bank account with \`\`${bank.name}\`\`.`);
+                return;
+            }
 
-      for (const bank of banks) {
-        embed.addFields({
-            name: `${bank.name} 🍕${bank.price}`,
-            value: `Max Balance: ${bank.maxBalance} coins\nMax Interest: ${bank.maxCompound} coins`,
-        });
-      }
+            if ((await joeUser.getLevel(interaction.user.id)) < bank.levelRequired) {
+                await interaction.reply(`You need to be level \`\`🍕${bank.levelRequired}\`\` to join \`\`${bank.name}\`\`.`);
+                return;
+            }
 
-      await interaction.reply({ embeds: [embed] });
-    }
-  },
-  cooldown: 1,
+            await joeBank.join({
+                userId: interaction.user.id,
+                bankId: bank.id,
+            });
+
+            await interaction.reply(`You joined \`\`${bank.name}\`\`!`);
+        }
+
+        if (option === "deposit" || option === "withdraw") {
+            const bankName = interaction.options.getString("bank_name")!;
+            const amount = interaction.options.getInteger("amount")!;
+
+            const bank = banks.find((bank) => bank.name === bankName)!;
+
+            const userBank = await prisma.bank.findUnique({
+                where: {
+                    bankId_ownerId: {
+                        ownerId: interaction.user.id,
+                        bankId: bank.id,
+                    },
+                },
+            });
+
+            if (!userBank) {
+                await interaction.reply(`You don't have a bank account with \`\`${bank.name}\`\`.`);
+                return;
+            }
+
+            if (option === "deposit") {
+                if (amount > (await joeUser.getBalance(interaction.user.id))) {
+                    await interaction.reply(`Insufficient funds. You need ${amount - (await joeUser.getBalance(interaction.user.id))} more coins.`);
+                    return;
+				}
+				
+				if (amount + userBank.balance > bank.maxBalance) {
+                    await interaction.reply(`You can only deposit up to ${bank.maxBalance} coins into ${bank.name}.`);
+                    return;
+                }
+
+                await joeBank.deposit({
+                    userId: interaction.user.id,
+                    bankId: bank.id,
+                    amount: amount,
+                });
+                await interaction.reply(`You deposited ${amount} coins into your ${bank.name} account.`);
+            } else if (option === "withdraw") {
+                if (amount > userBank.balance) {
+                    await interaction.reply(`Insufficient funds in bank.`);
+                    return;
+                }
+
+                await joeBank.withdraw({
+                    userId: interaction.user.id,
+                    bankId: bank.id,
+                    amount: amount,
+                });
+                await interaction.reply(`You withdrew ${amount} coins from your ${bank.name} account.`);
+            }
+        }
+
+        if (option === "stats") {
+            const embed = new EmbedBuilder().setTitle("bank").setDescription("Join a bank to store your money, earn interest and get loans.");
+
+            const userBanks = await prisma.bank.findMany({
+                where: {
+                    ownerId: interaction.user.id,
+                },
+            });
+
+            for (const bank of banks) {
+                const userBank = userBanks.find((userBank) => userBank.bankId === bank.id);
+
+                embed.addFields({
+                    name: `${bank.name} \`\`🍕${bank.levelRequired}\`\``,
+                    value: `Balance: ${userBank.balance}/${bank.maxBalance} coins`,
+                });
+            }
+
+            await interaction.reply({ embeds: [embed] });
+        }
+
+        if (option === "list") {
+            const embed = new EmbedBuilder().setTitle("bank").setDescription("Join a bank to store your money, earn interest and get loans.");
+
+            for (const bank of banks) {
+                embed.addFields({
+                    name: `${bank.name} 🍕${bank.levelRequired}`,
+                    value: `Max Balance: ${bank.maxBalance} coins\nMax Interest: ${bank.maxCompound} coins`,
+                });
+            }
+
+            await interaction.reply({ embeds: [embed] });
+        }
+    },
+    cooldown: 1,
 };
 
 export default bankCommand;

@@ -87,6 +87,31 @@ async function getTopBalances(
   });
 }
 
+async function getLevel(userId: string): Promise<number> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+
+  if (!user) {
+    throw new Error("User not found.");
+  }
+
+  return user.level;
+}
+
+async function addLevel(userId: string, amount: number): Promise<void> {
+  if (amount <= 0) {
+    throw new Error("Level amount should be greater than 0.");
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      level: {
+        increment: amount,
+      },
+    },
+  });
+}
+
 export default {
   hasMoney,
   create,
@@ -94,4 +119,6 @@ export default {
   withdraw,
   getBalance,
   getTopBalances,
+  getLevel,
+  addLevel,
 };

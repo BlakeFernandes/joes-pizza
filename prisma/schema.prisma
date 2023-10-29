@@ -9,13 +9,14 @@ datasource db {
 
 model Bank {
   id      Int    @id @default(autoincrement())
-  name    String
+  
+  bankId  Int
   balance Float  @default(1000)
-  size    Int    @default(0)
+
   ownerId String
   owner   User   @relation(fields: [ownerId], references: [id])
 
-  @@unique([name, ownerId])
+  @@unique([bankId, ownerId])
 }
 
 model User {
