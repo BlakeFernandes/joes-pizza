@@ -26,6 +26,7 @@ model Bank {
 model User {
   id     String @id
   wallet Float  @default(100)
+  level Int    @default(0)
 
   Bank  Bank[]
   Shops Shop[]

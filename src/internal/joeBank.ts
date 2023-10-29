@@ -1,6 +1,6 @@
-import { prisma } from "..";
+import { prisma } from "~/index";
 
-export async function getUserBanks(params: {
+async function getUserBanks(params: {
     userId: string;
 }) {
     return prisma.bank.findMany({
@@ -10,7 +10,7 @@ export async function getUserBanks(params: {
     })
 }
 
-export async function deposit(params: {
+async function deposit(params: {
   userId: string;
   bankName: string;
   amount: number;
@@ -30,7 +30,7 @@ export async function deposit(params: {
   });
 };
 
-export async function withdraw(params: {
+async function withdraw(params: {
   userId: string;
   bankName: string;
   amount: number;
@@ -49,3 +49,9 @@ export async function withdraw(params: {
     },
   });
 };
+
+export default {
+  getUserBanks,
+  deposit,
+  withdraw,
+}

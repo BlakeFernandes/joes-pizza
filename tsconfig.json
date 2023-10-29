@@ -1,12 +1,14 @@
 {
-  "compilerOptions": {
-    "target": "ES2020",                                  /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
-    "module": "commonjs",                                /* Specify what module code is generated. */
-    "outDir": "./dist",
-    "forceConsistentCasingInFileNames": true,            /* Ensure that casing is correct in imports. */
-    "baseUrl": ".",
-    "paths": {
-      "~/*": ["./src/*"],
+    "compilerOptions": {
+        "target": "ES2020" /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */,
+        "module": "commonjs" /* Specify what module code is generated. */,
+        "outDir": "./dist",
+        "forceConsistentCasingInFileNames": true /* Ensure that casing is correct in imports. */,
+        "baseUrl": ".",
+        "paths": {
+            "~/*": ["./src/*"]
+        }
     },
-  }
+    "include": ["**/*.ts"],
+    "exclude": ["node_modules"]
 }
