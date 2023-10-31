@@ -42,7 +42,7 @@ const bankCommand: SlashCommand = {
                 .setName("withdraw")
                 .setDescription("Withdraw coins")
                 .addIntegerOption((option) => option.setName("amount").setDescription("amount to withdraw").setRequired(true))
-    )
+        )
         .addSubcommand((subcommand) => subcommand.setName("join").setDescription("Join the bank"))
         .addSubcommand((subcommand) => subcommand.setName("view").setDescription("View your bank stats"))
         .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages),
@@ -99,6 +99,9 @@ const bankCommand: SlashCommand = {
             }
 
             if (option === "deposit") {
+                const userLevel = await joeUser.getLevel(interaction.user.id);
+                const userMaxBalance = maxBalance(userLevel);
+
                 if (amount > (await joeUser.getBalance(interaction.user.id))) {
                     await interaction.reply(
                         `Insufficient funds. You need ${formatNumber(amount - (await joeUser.getBalance(interaction.user.id)))} more coins.`
@@ -106,8 +109,12 @@ const bankCommand: SlashCommand = {
                     return;
                 }
 
-                if (amount + userBank.balance > maxBalance(await joeUser.getLevel(interaction.user.id))) {
-                    await interaction.reply(`You can only deposit up to ${formatNumber(bank.maxBalance)} coins into ${bank.name}.`);
+                const maxAllowedDeposit = userMaxBalance - userBank.balance;
+
+                if (amount > maxAllowedDeposit) {
+                    await interaction.reply(
+                        `You can only deposit up to ${formatNumber(maxAllowedDeposit)} more coins into ${bank.name} to not exceed your bank's max balance.`
+                    );
                     return;
                 }
 
@@ -132,23 +139,24 @@ const bankCommand: SlashCommand = {
             }
         }
 
-
         if (option === "view") {
             const embed = new EmbedBuilder().setTitle("bank").setDescription("Join a bank to store your money, earn interest and get loans.");
             const level = await joeUser.getLevel(interaction.user.id);
             const userBanks = await prisma.bank.findMany({
                 where: {
                     ownerId: interaction.user.id,
-                }
+                },
             });
             const bank = banks.find((bank) => bank.id === 1);
             const userBank = userBanks.find((userBank) => userBank.bankId === bank.id);
 
+            const roundedInterest = parseFloat(maxCompound(level).toFixed(6));
+
             embed.addFields({
                 name: `${bank.name} \`\`🍕${bank.levelRequired}\`\``,
-                value: `Balance: $${formatNumber(userBank.balance)}/$${formatNumber(maxBalance(level))} coins\nInterest: ${maxCompound(
-                    level
-                )}% coins\nProfit: $${formatNumber(userBank.profit)}`,
+                value: `Balance: $${formatNumber(userBank.balance)}/$${formatNumber(
+                    maxBalance(level)
+                )} coins\nInterest: ${roundedInterest}% coins\nProfit: $${formatNumber(userBank.profit)}`,
             });
 
             await interaction.reply({ embeds: [embed] });

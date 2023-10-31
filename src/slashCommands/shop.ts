@@ -64,7 +64,7 @@ export const shops: ShopData[] = [
     },
     {
         id: 8,
-        name: "🍕 Freddy Fazbear's Pizza",
+        name: "✈️ Al-Qaeda Airline",
         price: 90_000_000,
         priceExponent: 1.55,
         incomePerSecond: 100_000,
@@ -120,21 +120,25 @@ const shopCommand: SlashCommand = {
         if (option === "view") {
             const embed = new EmbedBuilder().setTitle("Shop").setDescription("Buy stuff to make more money!");
 
-            for (const shop of shops) {
-                const userShop = userShops.filter((userShop) => userShop.shopId === shop.id)[0];
-                const price = shop.price * Math.pow(shop.priceExponent, userShop?.amountOwned ?? 1);
-                const incomePerSecond = shop.incomePerSecond * (userShop?.amountOwned ?? 0);
+            const highestOwnedShopId = userShops.reduce((max, shop) => Math.max(max, shop.shopId), 0);
 
-                embed.addFields({
-                    name: `\`\`${shop.name}\`\``,
-                    value: `Price: $${formatNumber(price)} ($${formatNumber(shop.price)} @ x${shop.priceExponent}) 
+            for (const shop of shops) {
+                if (shop.id <= highestOwnedShopId + 1) {
+                    const userShop = userShops.find((us) => us.shopId === shop.id);
+                    const price = shop.price * Math.pow(shop.priceExponent, userShop?.amountOwned ?? 0);
+                    const incomePerSecond = shop.incomePerSecond * (userShop?.amountOwned ?? 0);
+
+                    embed.addFields({
+                        name: `\`\`${shop.name}\`\``,
+                        value: `Price: $${formatNumber(price)} ($${formatNumber(shop.price)} @ x${shop.priceExponent}) 
         Income Per Second: $${formatNumber(incomePerSecond)} ($${formatNumber(shop.incomePerSecond)})
-        Owned: ${formatNumber(userShop?.amountOwned) ?? 0}
-        Profit: $${formatNumber(userShop?.profit) ?? 0}`,
-                });
+        Owned: ${formatNumber(userShop?.amountOwned ?? 0)}
+        Profit: $${formatNumber(userShop?.profit ?? 0)}`,
+                    });
+                }
             }
 
-            await interaction.reply({ embeds: [embed] });
+            await interaction.reply({ embeds: [embed], ephemeral: true });
         }
 
         if (option === "buy") {
