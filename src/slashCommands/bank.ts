@@ -176,19 +176,19 @@ setInterval(async () => {
                 amount: incomePerSecond,
             });
 
-            // await prisma.bank.update({
-            //     where: {
-            //         bankId_ownerId: {
-            //             ownerId: user,
-            //             bankId: 1,
-            //         },
-            //     },
-            //     data: {
-            //         profit: {
-            //             increment: incomePerSecond,
-            //         },
-            //     },
-            // });
+            await prisma.bank.update({
+                where: {
+                    bankId_ownerId: {
+                        ownerId: user,
+                        bankId: 1,
+                    },
+                },
+                data: {
+                    profit: {
+                        increment: incomePerSecond,
+                    },
+                },
+            });
         }
     });
 }, 1000);

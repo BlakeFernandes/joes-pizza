@@ -155,7 +155,7 @@ const shopCommand: SlashCommand = {
 
             if (price > currentBalance) {
                 const missingAmount = price - currentBalance;
-                await interaction.reply(`Insufficient funds. You need $${formatNumber(missingAmount)} more to buy ${shop.name}.`);
+                await interaction.reply(`Insufficient funds. You need $${formatNumber(missingAmount)} more to buy \`\`${shop.name}\`\`.`);
                 return;
             }
 
@@ -178,7 +178,7 @@ const shopCommand: SlashCommand = {
                 },
             });
 
-            await interaction.reply(`You bought a ${shop.name} for $${formatNumber(price)}.`);
+            await interaction.reply(`You bought a \`\`${shop.name}\`\` for $${formatNumber(price)}.`);
         }
     },
 };
