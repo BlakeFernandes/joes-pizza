@@ -3,6 +3,7 @@ import { SlashCommand } from "~/types";
 import { prisma } from "..";
 import joeUser from "~/internal/joeUser";
 import joeBank from "~/internal/joeBank";
+import { formatNumber } from "~/functions/numberUtils";
 
 export type BankData = {
     id: number;
@@ -124,12 +125,14 @@ const bankCommand: SlashCommand = {
 
             if (option === "deposit") {
                 if (amount > (await joeUser.getBalance(interaction.user.id))) {
-                    await interaction.reply(`Insufficient funds. You need ${amount - (await joeUser.getBalance(interaction.user.id))} more coins.`);
+                    await interaction.reply(
+                        `Insufficient funds. You need ${formatNumber(amount - (await joeUser.getBalance(interaction.user.id)))} more coins.`
+                    );
                     return;
-				}
-				
-				if (amount + userBank.balance > bank.maxBalance) {
-                    await interaction.reply(`You can only deposit up to ${bank.maxBalance} coins into ${bank.name}.`);
+                }
+
+                if (amount + userBank.balance > bank.maxBalance) {
+                    await interaction.reply(`You can only deposit up to ${formatNumber(bank.maxBalance)} coins into ${bank.name}.`);
                     return;
                 }
 
@@ -138,7 +141,7 @@ const bankCommand: SlashCommand = {
                     bankId: bank.id,
                     amount: amount,
                 });
-                await interaction.reply(`You deposited ${amount} coins into your ${bank.name} account.`);
+                await interaction.reply(`You deposited ${formatNumber(amount)} coins into your ${bank.name} account.`);
             } else if (option === "withdraw") {
                 if (amount > userBank.balance) {
                     await interaction.reply(`Insufficient funds in bank.`);
@@ -150,7 +153,7 @@ const bankCommand: SlashCommand = {
                     bankId: bank.id,
                     amount: amount,
                 });
-                await interaction.reply(`You withdrew ${amount} coins from your ${bank.name} account.`);
+                await interaction.reply(`You withdrew ${formatNumber(amount)} coins from your ${bank.name} account.`);
             }
         }
 
@@ -168,7 +171,7 @@ const bankCommand: SlashCommand = {
 
                 embed.addFields({
                     name: `${bank.name} \`\`🍕${bank.levelRequired}\`\``,
-                    value: `Balance: ${userBank.balance}/${bank.maxBalance} coins`,
+                    value: `Balance: ${formatNumber(userBank.balance)}/${formatNumber(bank.maxBalance)} coins`,
                 });
             }
 
@@ -181,7 +184,7 @@ const bankCommand: SlashCommand = {
             for (const bank of banks) {
                 embed.addFields({
                     name: `${bank.name} 🍕${bank.levelRequired}`,
-                    value: `Max Balance: ${bank.maxBalance} coins\nMax Interest: ${bank.maxCompound} coins`,
+                    value: `Max Balance: ${formatNumber(bank.maxBalance)} coins\nMax Interest: ${formatNumber(bank.maxCompound)} coins`,
                 });
             }
 

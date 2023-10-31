@@ -1,4 +1,5 @@
 import { ChatInputCommandInteraction, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import { formatNumber } from "~/functions/numberUtils";
 import joeUser from "~/internal/joeUser";
 import { Command, SlashCommand } from "~/types";
 
@@ -20,7 +21,7 @@ const coinFlipCommand: SlashCommand = {
 
         if (!hasMoney) {
             const missingAmount = amount - currentBalance;
-            await interaction.reply(`Insufficient funds. You need ${Math.round(missingAmount)} more coins.`);
+            await interaction.reply(`Insufficient funds. You need ${formatNumber(missingAmount)} more coins.`);
             return;
         }
 
@@ -56,11 +57,11 @@ const coinFlipCommand: SlashCommand = {
         }
 
         if (isJackpot) {
-            await interaction.reply(`🎉 JACKPOT! 🎉 You won ${win} coins!`);
+            await interaction.reply(`🎉 JACKPOT! 🎉 You won ${formatNumber(win)} coins!`);
         } else if (userBalanceMap.has(user.id)) {
-            await interaction.reply(`You flipped ${result} and ${win > 0 ? "won" : "lost"} ${amount} coins.`);
+            await interaction.reply(`You flipped ${result} and ${win > 0 ? "won" : "lost"} ${formatNumber(amount)} coins.`);
         } else {
-            await interaction.reply(`You flipped ${result} and ${win > 0 ? "won" : "lost"} ${amount} coins.`);
+            await interaction.reply(`You flipped ${result} and ${win > 0 ? "won" : "lost"} ${formatNumber(amount)} coins.`);
         }
     },
 };
