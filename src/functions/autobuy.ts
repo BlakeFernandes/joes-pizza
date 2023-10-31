@@ -1,10 +1,11 @@
 // src/functions/autoBuy.ts
-import { ShopData } from "~/handlers/shops";
+import { ShopData } from "~/functions/shops";
 
 interface PurchaseSummary {
     shopName: string;
     count: number;
     totalSpent: number;
+    amountOwned: number;
 }
 
 function autoBuy(budget: number, shops: ShopData[]): PurchaseSummary[] {
@@ -26,6 +27,7 @@ function autoBuy(budget: number, shops: ShopData[]): PurchaseSummary[] {
                 shopName: shop.name,
                 count: amountOwned,
                 totalSpent: amountOwned * shop.price,
+                amountOwned: amountOwned, 
             });
         }
     }
