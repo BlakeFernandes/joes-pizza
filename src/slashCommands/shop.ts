@@ -73,8 +73,8 @@ const shopCommand: SlashCommand = {
                     name: shop.name,
                     value: `Price: $${formatNumber(price)} ($${formatNumber(shop.price)} @ x${shop.priceExponent}) 
         Income Per Second: $${formatNumber(incomePerSecond)} ($${formatNumber(shop.incomePerSecond)})
-        Owned: ${userShop?.amountOwned ?? 0}
-        Profit: $${userShop?.profit ?? 0}`,
+        Owned: ${formatNumber(userShop?.amountOwned) ?? 0}
+        Profit: $${formatNumber(userShop?.profit) ?? 0}`,
                 });
             }
 
