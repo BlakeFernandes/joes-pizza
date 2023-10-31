@@ -1,5 +1,5 @@
 import { ChatInputCommandInteraction, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
-import { formatNumber } from "~/functions/numberUtils";
+import formatNumber from "~/functions/numberUtils";
 import joeUser from "~/internal/joeUser";
 import { Command, SlashCommand } from "~/types";
 

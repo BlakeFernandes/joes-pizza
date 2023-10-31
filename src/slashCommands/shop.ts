@@ -1,5 +1,5 @@
 import { ChatInputCommandInteraction, EmbedBuilder, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
-import { formatNumber } from "~/functions/numberUtils";
+import formatNumber from "~/functions/numberUtils";
 import { prisma } from "~/index";
 import joeUser from "~/internal/joeUser";
 import { Command, SlashCommand } from "~/types";
@@ -15,14 +15,14 @@ export type ShopData = {
 export const shops: ShopData[] = [
     {
         id: 1,
-        name: "``🍋 Lemonade Stand``",
+        name: "🍋 Lemonade Stand",
         price: 1000,
         priceExponent: 1.15,
         incomePerSecond: 1,
     },
     {
         id: 2,
-        name: "``🌭 Bunnings Sausage Sizzle``",
+        name: "🌭 Bunnings Sausage Sizzle",
         price: 50_000,
         priceExponent: 1.5,
         incomePerSecond: 10,
@@ -70,7 +70,7 @@ const shopCommand: SlashCommand = {
                 const incomePerSecond = shop.incomePerSecond * (userShop?.amountOwned ?? 0);
 
                 embed.addFields({
-                    name: shop.name,
+                    name: `\`\`${shop.name}\`\``,
                     value: `Price: $${formatNumber(price)} ($${formatNumber(shop.price)} @ x${shop.priceExponent}) 
         Income Per Second: $${formatNumber(incomePerSecond)} ($${formatNumber(shop.incomePerSecond)})
         Owned: ${formatNumber(userShop?.amountOwned) ?? 0}
@@ -94,7 +94,7 @@ const shopCommand: SlashCommand = {
             const userShop = userShops.filter((userShop) => userShop.shopId === shop.id)[0];
             const amountOwned = userShop?.amountOwned ?? 0;
 
-            const price = Math.round(shop.price * Math.pow(shop.priceExponent, amountOwned));
+            const price = shop.price * Math.pow(shop.priceExponent, amountOwned);
             const currentBalance = await joeUser.getBalance(interaction.user.id);
 
             if (price > currentBalance) {

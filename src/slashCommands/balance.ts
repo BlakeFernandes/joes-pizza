@@ -1,5 +1,5 @@
 import { PermissionFlagsBits, SlashCommandBuilder, User } from "discord.js";
-import { formatNumber } from "~/functions/numberUtils";
+import  formatNumber  from "~/functions/numberUtils";
 import joeUser from "~/internal/joeUser";
 import { SlashCommand } from "~/types";
 

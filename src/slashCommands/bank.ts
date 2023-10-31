@@ -3,7 +3,7 @@ import { SlashCommand } from "~/types";
 import { prisma } from "..";
 import joeUser from "~/internal/joeUser";
 import joeBank from "~/internal/joeBank";
-import { formatNumber } from "~/functions/numberUtils";
+import formatNumber from "~/functions/numberUtils";
 
 export type BankData = {
     id: number;
