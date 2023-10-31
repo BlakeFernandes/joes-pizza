@@ -98,7 +98,6 @@ const shopCommand: SlashCommand = {
                 joeUser.withdraw(interaction.user.id, totalSpent);
                 await interaction.reply(replyMsg + `\nTotal spent: $${formatNumber(totalSpent)}`);
             } else {
-
                 const shop = shops.filter((shop) => shop.name === type)[0];
 
                 if (!type || !shop) {
@@ -139,7 +138,6 @@ const shopCommand: SlashCommand = {
                 });
             
                 await interaction.reply(`You bought ${count} \`\`${shop.name}\`\` for a total of $${formatNumber(priceForCount)}.`);
-            }
             }
         }
     },
