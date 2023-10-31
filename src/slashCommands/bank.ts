@@ -15,7 +15,7 @@ export type BankData = {
 export const banks: BankData[] = [
     {
         id: 1,
-        name: "ANZ",
+        name: "Joe's Pizzeria Bank",
         levelRequired: 10,
         maxBalance: 10000,
         maxCompound: 0.05,
@@ -30,50 +30,22 @@ const bankCommand: SlashCommand = {
             subcommand
                 .setName("deposit")
                 .setDescription("Deposit coins")
-                .addStringOption((option) => option.setName("bank_name").setDescription("Name of Bank").setRequired(true).setAutocomplete(true))
                 .addIntegerOption((option) => option.setName("amount").setDescription("amount to deposit").setRequired(true))
         )
         .addSubcommand((subcommand) =>
             subcommand
                 .setName("withdraw")
                 .setDescription("Withdraw coins")
-                .addStringOption((option) => option.setName("bank_name").setDescription("Name of Bank").setRequired(true).setAutocomplete(true))
                 .addIntegerOption((option) => option.setName("amount").setDescription("amount to withdraw").setRequired(true))
-        )
-        .addSubcommand((subcommand) =>
-            subcommand
-                .setName("join")
-                .setDescription("Join a bank")
-                .addStringOption((option) => option.setName("bank_name").setDescription("Name of Bank").setRequired(true).setAutocomplete(true))
-        )
+    )
+        .addSubcommand((subcommand) => subcommand.setName("join").setDescription("Join the bank"))
         .addSubcommand((subcommand) => subcommand.setName("stats").setDescription("View your bank stats"))
-        .addSubcommand((subcommand) => subcommand.setName("list").setDescription("View all banks"))
         .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages),
-    autocomplete: async (interaction) => {
-        const focusedOption = interaction.options.getFocused(true);
-        let choices;
-
-        if (focusedOption.name === "bank_name") {
-            const userBank = await prisma.bank.findMany({
-                where: {
-                    ownerId: interaction.user.id,
-                },
-            });
-
-            choices = banks.filter((bank) => !userBank.find((userBank) => userBank.bankId === bank.id)).map((bank) => bank.name);
-        }
-
-        const filtered = choices.filter((choice) => choice.startsWith(focusedOption.value));
-
-        await interaction.respond(filtered.map((choice) => ({ name: choice, value: choice })));
-    },
     execute: async (interaction) => {
         const option = interaction.options.getSubcommand()!;
 
         if (option === "join") {
-            const bankName = interaction.options.getString("bank_name")!;
-
-            const bank = banks.find((bank) => bank.name === bankName)!;
+            const bank = banks.find((bank) => bank.id === 1);
 
             const userBank = await prisma.bank.findUnique({
                 where: {
@@ -103,10 +75,9 @@ const bankCommand: SlashCommand = {
         }
 
         if (option === "deposit" || option === "withdraw") {
-            const bankName = interaction.options.getString("bank_name")!;
             const amount = interaction.options.getInteger("amount")!;
 
-            const bank = banks.find((bank) => bank.name === bankName)!;
+            const bank = banks.find((bank) => bank.id === 1);
 
             const userBank = await prisma.bank.findUnique({
                 where: {

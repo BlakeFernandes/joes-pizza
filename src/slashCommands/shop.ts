@@ -40,7 +40,7 @@ const shopCommand: SlashCommand = {
         let choices;
 
         if (focusedOption.name === "option") {
-            choices = ["shop", "buy", "stats"];
+            choices = ["view", "buy"];
         }
 
         if (focusedOption.name === "type") {
@@ -60,7 +60,7 @@ const shopCommand: SlashCommand = {
             },
         });
 
-        if (option === "shop") {
+        if (option === "view") {
             const embed = new EmbedBuilder().setTitle("Shop").setDescription("Buy stuff to make more money!");
 
             for (const shop of shops) {
