@@ -1,4 +1,5 @@
 import { ChatInputCommandInteraction, EmbedBuilder, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import { formatNumber } from "~/functions/numberUtils";
 import { prisma } from "~/index";
 import joeUser from "~/internal/joeUser";
 import { Command, SlashCommand } from "~/types";
@@ -65,13 +66,13 @@ const shopCommand: SlashCommand = {
 
             for (const shop of shops) {
                 const userShop = userShops.filter((userShop) => userShop.shopId === shop.id)[0];
-                const price = Math.round(shop.price * Math.pow(shop.priceExponent, userShop?.amountOwned ?? 1));
+                const price = shop.price * Math.pow(shop.priceExponent, userShop?.amountOwned ?? 1);
                 const incomePerSecond = shop.incomePerSecond * (userShop?.amountOwned ?? 0);
 
                 embed.addFields({
                     name: shop.name,
-                    value: `Price: $${price} ($${shop.price} @ x${shop.priceExponent}) 
-        Income Per Second: $${incomePerSecond} ($${shop.incomePerSecond})
+                    value: `Price: $${formatNumber(price)} ($${formatNumber(shop.price)} @ x${shop.priceExponent}) 
+        Income Per Second: $${formatNumber(incomePerSecond)} ($${formatNumber(shop.incomePerSecond)})
         Owned: ${userShop?.amountOwned ?? 0}
         Profit: $${userShop?.profit ?? 0}`,
                 });
@@ -98,7 +99,7 @@ const shopCommand: SlashCommand = {
 
             if (price > currentBalance) {
                 const missingAmount = price - currentBalance;
-                await interaction.reply(`Insufficient funds. You need $${Math.round(missingAmount)} more to buy ${shop.name}.`);
+                await interaction.reply(`Insufficient funds. You need $${formatNumber(missingAmount)} more to buy ${shop.name}.`);
                 return;
             }
 
@@ -121,7 +122,7 @@ const shopCommand: SlashCommand = {
                 },
             });
 
-            await interaction.reply(`You bought a ${shop.name} for $${Math.round(price)}.`);
+            await interaction.reply(`You bought a ${shop.name} for $${formatNumber(price)}.`);
         }
     },
 };
