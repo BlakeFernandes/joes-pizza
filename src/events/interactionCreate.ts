@@ -40,7 +40,12 @@ const event: BotEvent = {
           Date.now() + command.cooldown * 1000
         );
       }
-      command.execute(interaction);
+      try {
+        command.execute(interaction);
+      } catch (error) {
+        interaction.reply("Internal Error. You broke the bot, I hope you feel bad. Now go tell someone to fix it.")
+        console.error(error);
+      }
     } else if (interaction.isAutocomplete()) {
       const command = interaction.client.slashCommands.get(
         interaction.commandName

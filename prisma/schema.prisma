@@ -12,6 +12,7 @@ model Bank {
   
   bankId  Int
   balance Float  @default(1000)
+  // profit Int   @default(0)
 
   ownerId String
   owner   User   @relation(fields: [ownerId], references: [id])
