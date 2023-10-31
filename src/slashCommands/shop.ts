@@ -1,4 +1,5 @@
 import { ChatInputCommandInteraction, EmbedBuilder, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import autoBuy from "~/functions/autobuy";
 import formatNumber from "~/functions/numberUtils";
 import { prisma } from "~/index";
 import joeUser from "~/internal/joeUser";
@@ -145,45 +146,76 @@ const shopCommand: SlashCommand = {
         if (option === "buy") {
             const type = interaction.options.getString("type")!;
 
-            const shop = shops.filter((shop) => shop.name === type)[0];
+            if (type === "auto") {
+                const currentBalance = await joeUser.getBalance(interaction.user.id);
+                const purchaseSummary = autoBuy(currentBalance, shops);
 
-            if (!type || !shop) {
-                await interaction.reply("Invalid shop type.");
-                return;
-            }
+                let totalSpent = 0;
+                for (const summary of purchaseSummary) {
+                    totalSpent += summary.totalSpent;
+                    await prisma.shop.upsert({
+                        where: {
+                            shopId_ownerId: {
+                                shopId: shops.find((shop) => shop.name === summary.shopName)!.id,
+                                ownerId: interaction.user.id,
+                            },
+                        },
+                        update: {
+                            amountOwned:
+                                (userShops.find((userShop) => userShop.shopId === shops.find((shop) => shop.name === summary.shopName)!.id)?.amountOwned ?? 0) +
+                                summary.count,
+                        },
+                        create: {
+                            ownerId: interaction.user.id,
+                            shopId: shops.find((shop) => shop.name === summary.shopName)!.id,
+                            amountOwned: summary.count,
+                        },
+                    });
+                }
 
-            const userShop = userShops.filter((userShop) => userShop.shopId === shop.id)[0];
-            const amountOwned = userShop?.amountOwned ?? 0;
+                joeUser.withdraw(interaction.user.id, totalSpent);
+                await interaction.reply(`You automatically bought various shops for a total of $${formatNumber(totalSpent)}.`);
+            } else {
+                const shop = shops.filter((shop) => shop.name === type)[0];
 
-            const price = shop.price * Math.pow(shop.priceExponent, amountOwned);
-            const currentBalance = await joeUser.getBalance(interaction.user.id);
+                if (!type || !shop) {
+                    await interaction.reply("Invalid shop type.");
+                    return;
+                }
 
-            if (price > currentBalance) {
-                const missingAmount = price - currentBalance;
-                await interaction.reply(`Insufficient funds. You need $${formatNumber(missingAmount)} more to buy \`\`${shop.name}\`\`.`);
-                return;
-            }
+                const userShop = userShops.filter((userShop) => userShop.shopId === shop.id)[0];
+                const amountOwned = userShop?.amountOwned ?? 0;
 
-            joeUser.withdraw(interaction.user.id, price);
+                const price = shop.price * Math.pow(shop.priceExponent, amountOwned);
+                const currentBalance = await joeUser.getBalance(interaction.user.id);
 
-            await prisma.shop.upsert({
-                where: {
-                    shopId_ownerId: {
-                        shopId: shop.id,
-                        ownerId: interaction.user.id,
+                if (price > currentBalance) {
+                    const missingAmount = price - currentBalance;
+                    await interaction.reply(`Insufficient funds. You need $${formatNumber(missingAmount)} more to buy \`\`${shop.name}\`\`.`);
+                    return;
+                }
+
+                joeUser.withdraw(interaction.user.id, price);
+
+                await prisma.shop.upsert({
+                    where: {
+                        shopId_ownerId: {
+                            shopId: shop.id,
+                            ownerId: interaction.user.id,
+                        },
                     },
-                },
-                update: {
-                    amountOwned: (userShop?.amountOwned ?? 0) + 1,
-                },
-                create: {
-                    ownerId: interaction.user.id,
-                    shopId: shop.id,
-                    amountOwned: 1,
-                },
-            });
+                    update: {
+                        amountOwned: (userShop?.amountOwned ?? 0) + 1,
+                    },
+                    create: {
+                        ownerId: interaction.user.id,
+                        shopId: shop.id,
+                        amountOwned: 1,
+                    },
+                });
 
-            await interaction.reply(`You bought a \`\`${shop.name}\`\` for $${formatNumber(price)}.`);
+                await interaction.reply(`You bought a \`\`${shop.name}\`\` for $${formatNumber(price)}.`);
+            }
         }
     },
 };
