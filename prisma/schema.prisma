@@ -8,11 +8,11 @@ datasource db {
 }
 
 model Bank {
-  id      Int    @id @default(autoincrement())
-  
+  id Int @id @default(autoincrement())
+
   bankId  Int
-  balance Float  @default(1000)
-  // profit Int   @default(0)
+  balance BigInt @default(1000)
+  profit  BigInt @default(0)
 
   ownerId String
   owner   User   @relation(fields: [ownerId], references: [id])
@@ -22,19 +22,19 @@ model Bank {
 
 model User {
   id     String @id
-  wallet Int  @default(100)
-  level Int @default(0)
+  wallet BigInt @default(100)
+  level  BigInt @default(0)
 
-  Bank   Bank[]
-  Shops  Shop[]
+  Bank  Bank[]
+  Shops Shop[]
 }
 
 model Shop {
   id          Int    @id @default(autoincrement())
   shopId      Int
-  amountOwned Int
+  amountOwned BigInt
   ownerId     String
-  profit      Int    @default(0)
+  profit      BigInt @default(0)
   owner       User   @relation(fields: [ownerId], references: [id])
 
   @@unique([shopId, ownerId])

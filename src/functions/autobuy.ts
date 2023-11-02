@@ -1,5 +1,6 @@
 // src/functions/autoBuy.ts
-import { ShopData } from "~/handlers/shops";
+
+import { ShopData } from "~/slashCommands/shop";
 
 interface PurchaseSummary {
     shopName: string;

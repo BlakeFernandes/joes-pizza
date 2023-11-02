@@ -18,8 +18,8 @@ export const banks: BankData[] = [
         id: 1,
         name: "Joe's Pizzeria Bank",
         levelRequired: 10,
-        maxBalance: 10000,
-        maxCompound: 0.00005,
+        maxBalance: 10_000_000,
+        maxCompound: 0.0000005,
     },
 ];
 
@@ -184,19 +184,19 @@ setInterval(async () => {
                 amount: incomePerSecond,
             });
 
-            await prisma.bank.update({
-                where: {
-                    bankId_ownerId: {
-                        ownerId: user,
-                        bankId: 1,
-                    },
-                },
-                data: {
-                    profit: {
-                        increment: incomePerSecond,
-                    },
-                },
-            });
+            // await prisma.bank.update({
+            //     where: {
+            //         bankId_ownerId: {
+            //             ownerId: user,
+            //             bankId: 1,
+            //         },
+            //     },
+            //     data: {
+            //         profit: {
+            //             increment: incomePerSecond,
+            //         },
+            //     },
+            // });
         }
     });
 }, 1000);

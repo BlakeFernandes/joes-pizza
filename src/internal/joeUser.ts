@@ -45,8 +45,8 @@ async function withdraw(userId: string, amount: number): Promise<void> {
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
     if (user.wallet < amount) {
-        const missingAmount = amount - user.wallet;
-        throw new Error(`Insufficient funds. You need ${Math.round(missingAmount)} more coins.`);
+        const missingAmount = BigInt(amount) - user.wallet;
+        throw new Error(`Insufficient funds. You need ${Math.round(Number(missingAmount))} more coins.`);
     }
 
     await prisma.user.update({
@@ -59,7 +59,7 @@ async function withdraw(userId: string, amount: number): Promise<void> {
     });
 }
 
-async function getBalance(userId: string): Promise<number> {
+async function getBalance(userId: string): Promise<BigInt> {
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {
@@ -70,7 +70,6 @@ async function getBalance(userId: string): Promise<number> {
 }
 
 async function getTopBalances(limit: number = 10) {
-    // Fetch users with their related Bank data
     const users = await prisma.user.findMany({
         include: {
             Bank: true,
@@ -78,17 +77,17 @@ async function getTopBalances(limit: number = 10) {
         take: limit * 2,
     });
 
-    const sortedUsers = users.sort((a, b) => {
-        const aBankBalance = a.Bank.length > 0 ? a.Bank[0].balance : 0;
-        const bBankBalance = b.Bank.length > 0 ? b.Bank[0].balance : 0;
+    // const sortedUsers = users.sort((a, b) => {
+    //     const aBankBalance = a.Bank.length > 0 ? a.Bank[0].balance : BigInt(0);
+    //     const bBankBalance = b.Bank.length > 0 ? b.Bank[0].balance : BigInt(0);
 
-        return b.wallet + bBankBalance - (a.wallet + aBankBalance);
-    });
+    //     return b.wallet + bBankBalance - (a.wallet + aBankBalance);
+    // });
 
-    return sortedUsers.slice(0, limit);
+    return users;
 }
 
-async function getLevel(userId: string): Promise<number> {
+async function getLevel(userId: string): Promise<BigInt> {
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {

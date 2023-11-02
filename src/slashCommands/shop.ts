@@ -16,73 +16,73 @@ export type ShopData = {
 export const shops: ShopData[] = [
     {
         id: 1,
-        name: "🍋 Little Timmy's Lemonade Stand",
-        price: 5_000,
-        priceExponent: 1.1,
-        incomePerSecond: 20,
+        name: ":lemon: Little Timmy's Lemonade Stand",
+        price: 200,
+        priceExponent: 1.15,
+        incomePerSecond: 1,
     },
     {
         id: 2,
-        name: "🌭 Bunnings Sausage Sizzle",
-        price: 30_000,
-        priceExponent: 1.2,
-        incomePerSecond: 100,
+        name: ":hotdog: Bunnings Sausage Sizzle",
+        price: 1_500,
+        priceExponent: 1.25,
+        incomePerSecond: 5,
     },
     {
         id: 3,
-        name: "🍦 Mr Whippys",
-        price: 150_000,
-        priceExponent: 1.25,
-        incomePerSecond: 500,
+        name: ":icecream: Mr Whippys",
+        price: 10_000,
+        priceExponent: 1.3,
+        incomePerSecond: 20,
     },
     {
         id: 4,
-        name: "🍔 Maccas",
-        price: 600_000,
-        priceExponent: 1.3,
-        incomePerSecond: 2_000,
+        name: ":hamburger: Maccas",
+        price: 50_000,
+        priceExponent: 1.35,
+        incomePerSecond: 80,
     },
     {
         id: 5,
-        name: "🍩 Dunkin' Donuts",
-        price: 2_000_000,
-        priceExponent: 1.35,
-        incomePerSecond: 5_000,
+        name: ":doughnut: Dunkin' Donuts",
+        price: 200_000,
+        priceExponent: 1.4,
+        incomePerSecond: 320,
     },
     {
         id: 6,
-        name: "🏪 Generic Convenience Store",
-        price: 5_000_000,
-        priceExponent: 1.4,
-        incomePerSecond: 12_500,
+        name: ":convenience_store: Muhammad's Diary",
+        price: 700_000,
+        priceExponent: 1.45,
+        incomePerSecond: 1_280,
     },
     {
         id: 7,
-        name: "🎬 Hoyts",
-        price: 12_000_000,
-        priceExponent: 1.45,
-        incomePerSecond: 25_000,
+        name: ":clapper: Hoyts",
+        price: 2_500_000,
+        priceExponent: 1.5,
+        incomePerSecond: 5_120,
     },
     {
         id: 8,
-        name: "✈️ Generic Airline",
-        price: 25_000_000,
-        priceExponent: 1.5,
-        incomePerSecond: 50_000,
+        name: ":airplane: Al-Qaeda Airline",
+        price: 9_000_000,
+        priceExponent: 1.55,
+        incomePerSecond: 20_480,
     },
     {
         id: 9,
-        name: "🚀 Generic Spaceships",
-        price: 50_000_000,
-        priceExponent: 1.55,
-        incomePerSecond: 100_000,
+        name: ":rocket: Daddy Musk's Spaceships",
+        price: 32_000_000,
+        priceExponent: 1.6,
+        incomePerSecond: 81_920,
     },
     {
         id: 10,
-        name: "🍕 Joe's Pizza",
-        price: 100_000_000,
-        priceExponent: 1.6,
-        incomePerSecond: 200_000,
+        name: ":pizza: Joe's Pizza",
+        price: 500_000_000,
+        priceExponent: 1.65,
+        incomePerSecond: 327_680,
     },
 ];
 
@@ -127,15 +127,15 @@ const shopCommand: SlashCommand = {
             for (const shop of shops) {
                 if (shop.id <= highestOwnedShopId + 1) {
                     const userShop = userShops.find((us) => us.shopId === shop.id);
-                    const price = shop.price * Math.pow(shop.priceExponent, userShop?.amountOwned ?? 0);
-                    const incomePerSecond = shop.incomePerSecond * (userShop?.amountOwned ?? 0);
+                    const price = shop.price * Math.pow(shop.priceExponent, Number(userShop?.amountOwned ?? 0));
+                    const incomePerSecond = shop.incomePerSecond * Number(userShop?.amountOwned ?? 0);
 
                     embed.addFields({
                         name: `\`\`${shop.name}\`\``,
                         value: `Price: $${formatNumber(price)} ($${formatNumber(shop.price)} @ x${shop.priceExponent}) 
-        Income Per Second: $${formatNumber(incomePerSecond)} ($${formatNumber(shop.incomePerSecond)})
-        Owned: ${formatNumber(userShop?.amountOwned ?? 0)}
-        Profit: $${formatNumber(userShop?.profit ?? 0)}`,
+            Income Per Second: $${formatNumber(incomePerSecond)} ($${formatNumber(shop.incomePerSecond)})
+            Owned: ${formatNumber(userShop?.amountOwned ?? 0)}
+            Profit: $${formatNumber(userShop?.profit ?? 0)}`,
                     });
                 }
             }
@@ -146,76 +146,45 @@ const shopCommand: SlashCommand = {
         if (option === "buy") {
             const type = interaction.options.getString("type")!;
 
-            if (type === "auto") {
-                const currentBalance = await joeUser.getBalance(interaction.user.id);
-                const purchaseSummary = autoBuy(currentBalance, shops);
+            const shop = shops.filter((shop) => shop.name === type)[0];
 
-                let totalSpent = 0;
-                for (const summary of purchaseSummary) {
-                    totalSpent += summary.totalSpent;
-                    await prisma.shop.upsert({
-                        where: {
-                            shopId_ownerId: {
-                                shopId: shops.find((shop) => shop.name === summary.shopName)!.id,
-                                ownerId: interaction.user.id,
-                            },
-                        },
-                        update: {
-                            amountOwned:
-                                (userShops.find((userShop) => userShop.shopId === shops.find((shop) => shop.name === summary.shopName)!.id)?.amountOwned ?? 0) +
-                                summary.count,
-                        },
-                        create: {
-                            ownerId: interaction.user.id,
-                            shopId: shops.find((shop) => shop.name === summary.shopName)!.id,
-                            amountOwned: summary.count,
-                        },
-                    });
-                }
-
-                joeUser.withdraw(interaction.user.id, totalSpent);
-                await interaction.reply(`You automatically bought various shops for a total of $${formatNumber(totalSpent)}.`);
-            } else {
-                const shop = shops.filter((shop) => shop.name === type)[0];
-
-                if (!type || !shop) {
-                    await interaction.reply("Invalid shop type.");
-                    return;
-                }
-
-                const userShop = userShops.filter((userShop) => userShop.shopId === shop.id)[0];
-                const amountOwned = userShop?.amountOwned ?? 0;
-
-                const price = shop.price * Math.pow(shop.priceExponent, amountOwned);
-                const currentBalance = await joeUser.getBalance(interaction.user.id);
-
-                if (price > currentBalance) {
-                    const missingAmount = price - currentBalance;
-                    await interaction.reply(`Insufficient funds. You need $${formatNumber(missingAmount)} more to buy \`\`${shop.name}\`\`.`);
-                    return;
-                }
-
-                joeUser.withdraw(interaction.user.id, price);
-
-                await prisma.shop.upsert({
-                    where: {
-                        shopId_ownerId: {
-                            shopId: shop.id,
-                            ownerId: interaction.user.id,
-                        },
-                    },
-                    update: {
-                        amountOwned: (userShop?.amountOwned ?? 0) + 1,
-                    },
-                    create: {
-                        ownerId: interaction.user.id,
-                        shopId: shop.id,
-                        amountOwned: 1,
-                    },
-                });
-
-                await interaction.reply(`You bought a \`\`${shop.name}\`\` for $${formatNumber(price)}.`);
+            if (!type || !shop) {
+                await interaction.reply("Invalid shop type.");
+                return;
             }
+
+            const userShop = userShops.filter((userShop) => userShop.shopId === shop.id)[0];
+            const amountOwned = userShop?.amountOwned ?? BigInt(0);
+
+            const price = shop.price * Math.pow(shop.priceExponent, amountOwned);
+            const currentBalance = await joeUser.getBalance(interaction.user.id);
+
+            if (price > currentBalance) {
+                const missingAmount = price - currentBalance;
+                await interaction.reply(`Insufficient funds. You need $${formatNumber(missingAmount)} more to buy \`\`${shop.name}\`\`.`);
+                return;
+            }
+
+            joeUser.withdraw(interaction.user.id, price);
+
+            await prisma.shop.upsert({
+                where: {
+                    shopId_ownerId: {
+                        shopId: shop.id,
+                        ownerId: interaction.user.id,
+                    },
+                },
+                update: {
+                    amountOwned: (userShop?.amountOwned ?? 0) + 1,
+                },
+                create: {
+                    ownerId: interaction.user.id,
+                    shopId: shop.id,
+                    amountOwned: 1,
+                },
+            });
+
+            await interaction.reply(`You bought a \`\`${shop.name}\`\` for $${formatNumber(price)}.`);
         }
     },
 };
