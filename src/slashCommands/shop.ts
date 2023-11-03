@@ -1,6 +1,6 @@
 import { ChatInputCommandInteraction, EmbedBuilder, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import autoBuy from "~/functions/autobuy";
-import formatNumber from "~/functions/numberUtils";
+import { formatBigInt } from "~/functions/numberUtils";
 import { prisma } from "~/index";
 import joeUser from "~/internal/joeUser";
 import { Command, SlashCommand } from "~/types";
@@ -8,81 +8,81 @@ import { Command, SlashCommand } from "~/types";
 export type ShopData = {
     id: number;
     name: string;
-    price: number;
-    priceExponent: number;
-    incomePerSecond: number;
+    price: bigint;
+    priceExponent: bigint;
+    incomePerSecond: bigint;
 };
 
 export const shops: ShopData[] = [
     {
         id: 1,
         name: ":lemon: Little Timmy's Lemonade Stand",
-        price: 200,
-        priceExponent: 1.15,
-        incomePerSecond: 1,
+        price: BigInt(200),
+        priceExponent: BigInt(1.15),
+        incomePerSecond: BigInt(1),
     },
     {
         id: 2,
         name: ":hotdog: Bunnings Sausage Sizzle",
-        price: 1_500,
-        priceExponent: 1.25,
-        incomePerSecond: 5,
+        price: BigInt(1_500),
+        priceExponent: BigInt(1.25),
+        incomePerSecond: BigInt(5),
     },
     {
         id: 3,
         name: ":icecream: Mr Whippys",
-        price: 10_000,
-        priceExponent: 1.3,
-        incomePerSecond: 20,
+        price: BigInt(10_000),
+        priceExponent: BigInt(1.3),
+        incomePerSecond: BigInt(20),
     },
     {
         id: 4,
         name: ":hamburger: Maccas",
-        price: 50_000,
-        priceExponent: 1.35,
-        incomePerSecond: 80,
+        price: BigInt(50_000),
+        priceExponent: BigInt(1.35),
+        incomePerSecond: BigInt(80),
     },
     {
         id: 5,
         name: ":doughnut: Dunkin' Donuts",
-        price: 200_000,
-        priceExponent: 1.4,
-        incomePerSecond: 320,
+        price: BigInt(200_000),
+        priceExponent: BigInt(1.4),
+        incomePerSecond: BigInt(320),
     },
     {
         id: 6,
         name: ":convenience_store: Muhammad's Diary",
-        price: 700_000,
-        priceExponent: 1.45,
-        incomePerSecond: 1_280,
+        price: BigInt(700_000),
+        priceExponent: BigInt(1.45),
+        incomePerSecond: BigInt(1_280),
     },
     {
         id: 7,
         name: ":clapper: Hoyts",
-        price: 2_500_000,
-        priceExponent: 1.5,
-        incomePerSecond: 5_120,
+        price: BigInt(2_500_000),
+        priceExponent: BigInt(1.5),
+        incomePerSecond: BigInt(5_120),
     },
     {
         id: 8,
         name: ":airplane: Al-Qaeda Airline",
-        price: 9_000_000,
-        priceExponent: 1.55,
-        incomePerSecond: 20_480,
+        price: BigInt(9_000_000),
+        priceExponent: BigInt(1.55),
+        incomePerSecond: BigInt(20_480),
     },
     {
         id: 9,
         name: ":rocket: Daddy Musk's Spaceships",
-        price: 32_000_000,
-        priceExponent: 1.6,
-        incomePerSecond: 81_920,
+        price: BigInt(32_000_000),
+        priceExponent: BigInt(1.6),
+        incomePerSecond: BigInt(81_920),
     },
     {
         id: 10,
         name: ":pizza: Joe's Pizza",
-        price: 500_000_000,
-        priceExponent: 1.65,
-        incomePerSecond: 327_680,
+        price: BigInt(500_000_000),
+        priceExponent: BigInt(1.65),
+        incomePerSecond: BigInt(327_680),
     },
 ];
 
@@ -127,15 +127,15 @@ const shopCommand: SlashCommand = {
             for (const shop of shops) {
                 if (shop.id <= highestOwnedShopId + 1) {
                     const userShop = userShops.find((us) => us.shopId === shop.id);
-                    const price = shop.price * Math.pow(shop.priceExponent, Number(userShop?.amountOwned ?? 0));
-                    const incomePerSecond = shop.incomePerSecond * Number(userShop?.amountOwned ?? 0);
+                    const price = shop.price * (shop.priceExponent^(userShop?.amountOwned ?? BigInt(0)));
+                    const incomePerSecond = shop.incomePerSecond * userShop?.amountOwned;
 
                     embed.addFields({
                         name: `\`\`${shop.name}\`\``,
-                        value: `Price: $${formatNumber(price)} ($${formatNumber(shop.price)} @ x${shop.priceExponent}) 
-            Income Per Second: $${formatNumber(incomePerSecond)} ($${formatNumber(shop.incomePerSecond)})
-            Owned: ${formatNumber(userShop?.amountOwned ?? 0)}
-            Profit: $${formatNumber(userShop?.profit ?? 0)}`,
+                        value: `Price: $${formatBigInt(price)} ($${formatBigInt(shop.price)} @ x${shop.priceExponent}) 
+            Income Per Second: $${formatBigInt(incomePerSecond)} ($${formatBigInt(shop.incomePerSecond)})
+            Owned: ${formatBigInt(userShop?.amountOwned)}
+            Profit: $${formatBigInt(userShop?.profit)}`,
                     });
                 }
             }
@@ -156,12 +156,12 @@ const shopCommand: SlashCommand = {
             const userShop = userShops.filter((userShop) => userShop.shopId === shop.id)[0];
             const amountOwned = userShop?.amountOwned ?? BigInt(0);
 
-            const price = shop.price * Math.pow(shop.priceExponent, amountOwned);
+            const price = shop.price * (shop.priceExponent^amountOwned);
             const currentBalance = await joeUser.getBalance(interaction.user.id);
 
             if (price > currentBalance) {
                 const missingAmount = price - currentBalance;
-                await interaction.reply(`Insufficient funds. You need $${formatNumber(missingAmount)} more to buy \`\`${shop.name}\`\`.`);
+                await interaction.reply(`Insufficient funds. You need $${formatBigInt(missingAmount)} more to buy \`\`${shop.name}\`\`.`);
                 return;
             }
 
@@ -175,7 +175,7 @@ const shopCommand: SlashCommand = {
                     },
                 },
                 update: {
-                    amountOwned: (userShop?.amountOwned ?? 0) + 1,
+                    amountOwned: (userShop?.amountOwned ?? BigInt(0)) + BigInt(1),
                 },
                 create: {
                     ownerId: interaction.user.id,
@@ -184,7 +184,7 @@ const shopCommand: SlashCommand = {
                 },
             });
 
-            await interaction.reply(`You bought a \`\`${shop.name}\`\` for $${formatNumber(price)}.`);
+            await interaction.reply(`You bought a \`\`${shop.name}\`\` for $${formatBigInt(price)}.`);
         }
     },
 };

@@ -1,6 +1,6 @@
 import { prisma } from "~/index";
 
-async function hasMoney(userId: string, amount: number): Promise<boolean> {
+async function hasMoney(userId: string, amount: bigint): Promise<boolean> {
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {
@@ -22,7 +22,7 @@ async function create(userId: string): Promise<void> {
     });
 }
 
-async function deposit(userId: string, amount: number): Promise<void> {
+async function deposit(userId: string, amount: bigint): Promise<void> {
     if (amount <= 0) {
         throw new Error("Deposit amount should be greater than 0.");
     }
@@ -37,7 +37,7 @@ async function deposit(userId: string, amount: number): Promise<void> {
     });
 }
 
-async function withdraw(userId: string, amount: number): Promise<void> {
+async function withdraw(userId: string, amount: bigint): Promise<void> {
     if (amount <= 0) {
         throw new Error("Withdraw amount should be greater than 0.");
     }
@@ -59,7 +59,7 @@ async function withdraw(userId: string, amount: number): Promise<void> {
     });
 }
 
-async function getBalance(userId: string): Promise<BigInt> {
+async function getBalance(userId: string): Promise<bigint> {
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {
@@ -87,7 +87,7 @@ async function getTopBalances(limit: number = 10) {
     return users;
 }
 
-async function getLevel(userId: string): Promise<BigInt> {
+async function getLevel(userId: string): Promise<bigint> {
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {
@@ -97,7 +97,7 @@ async function getLevel(userId: string): Promise<BigInt> {
     return user.level;
 }
 
-async function addLevel(userId: string, amount: number): Promise<void> {
+async function addLevel(userId: string, amount: bigint): Promise<void> {
     if (amount <= 0) {
         throw new Error("Level amount should be greater than 0.");
     }
