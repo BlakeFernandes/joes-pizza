@@ -8,10 +8,10 @@ const MULTIPLIER = 1.15;
 
 const levelupCommand: SlashCommand = {
     command: new SlashCommandBuilder()
-        .setName("levelup").
-        setDescription("Level up your user")
-        .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages)
-    .addSubcommand((subcommand) => subcommand.setName("max").setDescription("Level up to max level")),
+        .setName("levelup")
+        .setDescription("Level up your user")
+        .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages),
+        // .addSubcommand((subcommand) => subcommand.setName("max").setDescription("Level up to max level")),
     execute: async (interaction) => {
         const command = interaction.options.getSubcommand()!;
         const user = interaction.user;

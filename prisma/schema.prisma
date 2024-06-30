@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = "postgresql://yes:yes@localhost:5432/yes"
+  provider = "sqlite"
+  url      = "file:./dev.db"
+  // url      = "postgresql://yes:yes@localhost:5432/yes"
 }
 
 model Bank {
@@ -12,7 +13,7 @@ model Bank {
   
   bankId  Int
   balance Float  @default(1000)
-  // profit Int   @default(0)
+  profit Int   @default(0)
 
   ownerId String
   owner   User   @relation(fields: [ownerId], references: [id])

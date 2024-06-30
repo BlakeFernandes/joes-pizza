@@ -14,7 +14,7 @@ module.exports = (client: Client) => {
 
     for (let i = 0; i < commandFiles.length; i++) {
         let file = commandFiles[i];
-        if (!file.endsWith(".js")) continue;
+        if (!file.endsWith(".ts")) continue;
         let command: SlashCommand = require(`${slashCommandsDir}/${file}`).default;
         try {
             slashCommands.push(command.command);
