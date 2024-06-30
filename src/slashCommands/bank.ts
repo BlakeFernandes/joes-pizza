@@ -1,16 +1,17 @@
-import { ChatInputCommandInteraction, EmbedBuilder, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import { PermissionFlagsBits, EmbedBuilder, SlashCommandBuilder } from "discord.js";
 import { SlashCommand } from "~/types";
 import { prisma } from "..";
 import joeUser from "~/internal/joeUser";
 import joeBank from "~/internal/joeBank";
-import formatNumber from "~/functions/numberUtils";
+import { formatNumber, toBigNumber, toPrismaString } from "~/functions/numberUtils";
+import BigNumber from "bignumber.js";
 
 export type BankData = {
     id: number;
     name: string;
     levelRequired: number;
-    maxBalance;
-    maxCompound;
+    maxBalance: BigNumber;
+    maxCompound: number;
 };
 
 export const banks: BankData[] = [
@@ -18,14 +19,24 @@ export const banks: BankData[] = [
         id: 1,
         name: "Joe's Pizzeria Bank",
         levelRequired: 10,
-        maxBalance: 10000,
-        maxCompound: 0.00005,
+        maxBalance: toBigNumber(1000000), // Increased to allow more growth
+        maxCompound: 0.0005, // Adjusted for a more significant compound rate
     },
 ];
 
 const mainBank = banks.find((bank) => bank.id === 1);
-const maxBalance = (level: number) => mainBank.maxBalance * level;
-const maxCompound = (level: number) => mainBank.maxCompound * level;
+const maxBalance = (level: number) => {
+    if (mainBank) {
+        return toBigNumber(mainBank.maxBalance).times(level);
+    }
+    return toBigNumber(0);
+};
+const maxCompound = (level: number) => {
+    if (mainBank) {
+        return toBigNumber(mainBank.maxCompound).times(level);
+    }
+    return toBigNumber(0);
+};
 
 const bankCommand: SlashCommand = {
     command: new SlashCommandBuilder()
@@ -45,12 +56,16 @@ const bankCommand: SlashCommand = {
         )
         .addSubcommand((subcommand) => subcommand.setName("join").setDescription("Join the bank"))
         .addSubcommand((subcommand) => subcommand.setName("view").setDescription("View your bank stats"))
-        .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages),
+        .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages) as SlashCommandBuilder,
     execute: async (interaction) => {
         const option = interaction.options.getSubcommand()!;
 
         if (option === "join") {
             const bank = banks.find((bank) => bank.id === 1);
+            if (!bank) {
+                await interaction.reply("Bank not found.");
+                return;
+            }
 
             const userBank = await prisma.bank.findUnique({
                 where: {
@@ -80,9 +95,13 @@ const bankCommand: SlashCommand = {
         }
 
         if (option === "deposit" || option === "withdraw") {
-            const amount = interaction.options.getInteger("amount")!;
+            const amount = toBigNumber(interaction.options.getInteger("amount")!);
 
             const bank = banks.find((bank) => bank.id === 1);
+            if (!bank) {
+                await interaction.reply("Bank not found.");
+                return;
+            }
 
             const userBank = await prisma.bank.findUnique({
                 where: {
@@ -102,16 +121,16 @@ const bankCommand: SlashCommand = {
                 const userLevel = await joeUser.getLevel(interaction.user.id);
                 const userMaxBalance = maxBalance(userLevel);
 
-                if (amount > (await joeUser.getBalance(interaction.user.id))) {
-                    await interaction.reply(
-                        `Insufficient funds. You need ${formatNumber(amount - (await joeUser.getBalance(interaction.user.id)))} more coins.`
-                    );
+                const userBalance = toBigNumber(await joeUser.getBalance(interaction.user.id));
+
+                if (amount.gt(userBalance)) {
+                    await interaction.reply(`Insufficient funds. You need ${formatNumber(amount.minus(userBalance))} more coins.`);
                     return;
                 }
 
-                const maxAllowedDeposit = userMaxBalance - userBank.balance;
+                const maxAllowedDeposit = userMaxBalance.minus(userBank.balance);
 
-                if (amount > maxAllowedDeposit) {
+                if (amount.gt(maxAllowedDeposit)) {
                     await interaction.reply(
                         `You can only deposit up to ${formatNumber(maxAllowedDeposit)} more coins into ${bank.name} to not exceed your bank's max balance.`
                     );
@@ -125,7 +144,7 @@ const bankCommand: SlashCommand = {
                 });
                 await interaction.reply(`You deposited ${formatNumber(amount)} coins into your ${bank.name} account.`);
             } else if (option === "withdraw") {
-                if (amount > userBank.balance) {
+                if (amount.gt(userBank.balance)) {
                     await interaction.reply(`Insufficient funds in bank.`);
                     return;
                 }
@@ -140,7 +159,7 @@ const bankCommand: SlashCommand = {
         }
 
         if (option === "view") {
-            const embed = new EmbedBuilder().setTitle("bank").setDescription("Join a bank to store your money, earn interest and get loans.");
+            const embed = new EmbedBuilder().setTitle("Bank").setDescription("Join a bank to store your money, earn interest, and get loans.");
             const level = await joeUser.getLevel(interaction.user.id);
             const userBanks = await prisma.bank.findMany({
                 where: {
@@ -148,18 +167,25 @@ const bankCommand: SlashCommand = {
                 },
             });
             const bank = banks.find((bank) => bank.id === 1);
-            const userBank = userBanks.find((userBank) => userBank.bankId === bank.id);
-
-            const roundedInterest = parseFloat(maxCompound(level).toFixed(6));
+            if (!bank) {
+                await interaction.reply("Bank not found.");
+                return;
+            }
+            const userBank = userBanks.find((userBank: { bankId: number }) => userBank.bankId === bank.id);
+            if (!userBank) {
+                await interaction.reply(`You don't have a bank account with \`\`${bank.name}\`\`.`);
+                return;
+            }
+            const roundedInterest = maxCompound(level).toFixed(6);
 
             embed.addFields({
                 name: `${bank.name} \`\`🍕${bank.levelRequired}\`\``,
-                value: `Balance: $${formatNumber(userBank.balance)}/$${formatNumber(
+                value: `Balance: $${formatNumber(toBigNumber(userBank.balance))}/$${formatNumber(
                     maxBalance(level)
-                )} coins\nInterest: ${roundedInterest}% coins\nProfit: $${formatNumber(userBank.profit)}`,
+                )} coins\nInterest: ${roundedInterest}% coins\nProfit: $${formatNumber(toBigNumber(userBank.profit))}`,
             });
 
-            await interaction.reply({ embeds: [embed] });
+            await interaction.reply({ embeds: [embed], ephemeral: true });
         }
     },
     cooldown: 1,
@@ -167,38 +193,32 @@ const bankCommand: SlashCommand = {
 
 setInterval(async () => {
     const userBanks = await prisma.bank.findMany();
-    userBanks.forEach(async (userBank) => {
-        const user = userBank.ownerId;
-        const level = await joeUser.getLevel(user);
-        const compound = maxCompound(level);
-        const incomePerSecond = userBank.balance * compound;
+    for (const userBank of userBanks) {
+        const balance = toBigNumber(userBank.balance);
+        const profit = toBigNumber(userBank.profit);
+        const bankData = banks.find((bank) => bank.id === userBank.bankId);
 
-        if (incomePerSecond > 0) {
-            if (incomePerSecond + userBank.balance > maxBalance(level)) {
-                return;
-            }
-
-            await joeBank.deposit({
-                userId: user,
-                bankId: 1,
-                amount: incomePerSecond,
-            });
+        if (bankData) {
+            const interest = balance.times(bankData.maxCompound);
+            const newProfit = profit.plus(interest);
+            const newBalance = balance.plus(interest);
 
             await prisma.bank.update({
                 where: {
                     bankId_ownerId: {
-                        ownerId: user,
-                        bankId: 1,
+                        ownerId: userBank.ownerId,
+                        bankId: userBank.bankId,
                     },
                 },
                 data: {
-                    profit: {
-                        increment: incomePerSecond,
-                    },
+                    balance: toPrismaString(newBalance),
+                    profit: toPrismaString(newProfit),
                 },
             });
         }
-    });
+    }
 }, 1000);
+
+console.log("🏦 Bank Interval Started!");
 
 export default bankCommand;

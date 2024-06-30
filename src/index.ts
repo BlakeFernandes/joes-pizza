@@ -1,12 +1,14 @@
-import { Client, GatewayIntentBits, Collection, PermissionFlagsBits, ActivityType } from "discord.js";
-const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
-});
-import { Command, SlashCommand } from "./types";
+import { Client, GatewayIntentBits, Collection, ActivityType } from "discord.js";
 import { config } from "dotenv";
 import { readdirSync } from "fs";
 import { join } from "path";
 import { PrismaClient } from "@prisma/client";
+import { SlashCommand, Command } from "./types";
+import { toBigNumber } from "./functions/numberUtils";
+
+const client = new Client({
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+});
 
 export const prisma = new PrismaClient();
 
@@ -23,20 +25,30 @@ readdirSync(handlersDir).forEach((handler) => {
 });
 
 setInterval(async () => {
-    const totalCoins = await prisma.user.aggregate({
-        _sum: {
+    const users = await prisma.user.findMany({
+        select: {
             wallet: true,
         },
     });
-    client.user.setPresence({
-        activities: [
-            {
-                name: `${totalCoins._sum.wallet.toString()} coins across users!`,
-                type: ActivityType.Watching,
-            },
-        ],
-        status: "online",
-    });
+
+    let walletSum = toBigNumber(0);
+
+    for (const user of users) {
+        const wallet = toBigNumber(user.wallet);
+        walletSum = walletSum.plus(wallet);
+    }
+
+    if (client.user) {
+        client.user.setPresence({
+            activities: [
+                {
+                    name: `${walletSum.toString()} coins across users!`,
+                    type: ActivityType.Watching,
+                },
+            ],
+            status: "online",
+        });
+    }
 }, 60000);
 
 client.login(process.env.TOKEN);
