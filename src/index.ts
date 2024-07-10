@@ -6,21 +6,25 @@ import { PrismaClient } from "@prisma/client";
 import { SlashCommand, Command } from "./types";
 import { toBigNumber } from "./functions/numberUtils";
 
+console.log("Application is starting...");
+
+config();
+
 const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
 });
 
 export const prisma = new PrismaClient();
 
-config();
-
 client.slashCommands = new Collection<string, SlashCommand>();
 client.commands = new Collection<string, Command>();
 client.cooldowns = new Collection<string, number>();
 
+console.log("Loading handlers...");
 const handlersDir = join(__dirname, "./handlers");
 readdirSync(handlersDir).forEach((handler) => {
     if (!handler.endsWith(".ts")) return;
+    console.log(`Loading handler: ${handler}`);
     require(`${handlersDir}/${handler}`)(client);
 });
 
@@ -51,4 +55,11 @@ setInterval(async () => {
     }
 }, 60000);
 
-client.login(process.env.TOKEN);
+client
+    .login(process.env.TOKEN)
+    .then(() => {
+        console.log("Bot logged in successfully!");
+    })
+    .catch((err) => {
+        console.error("Error logging in the bot:", err);
+    });
