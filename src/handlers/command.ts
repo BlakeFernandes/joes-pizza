@@ -1,38 +1,41 @@
 import { Client, Routes, SlashCommandBuilder } from "discord.js";
 import { REST } from "@discordjs/rest";
-import { readdirSync } from "fs";
+import { readdirSync, statSync } from "fs";
 import { join } from "path";
-import { Command, SlashCommand } from "../types";
+import { SlashCommand } from "../types";
 
-module.exports = (client: Client) => {
+module.exports = async (client: Client) => {
     const slashCommands: SlashCommandBuilder[] = [];
-    const commands: Command[] = [];
 
-    let slashCommandsDir = join(__dirname, "../slashCommands");
-
-    const commandFiles = readdirSync(slashCommandsDir);
-
-    for (let i = 0; i < commandFiles.length; i++) {
-        let file = commandFiles[i];
-        if (!file.endsWith(".ts")) continue;
-        let command: SlashCommand = require(`${slashCommandsDir}/${file}`).default;
-        try {
-            slashCommands.push(command.command);
-            client.slashCommands.set(command.command.name, command);
-        } catch (error) {
-            console.log(`Error loading slash command ${file}:`);
+    const loadCommands = (dir: string) => {
+        const commandFiles = readdirSync(dir);
+        for (const file of commandFiles) {
+            const filePath = join(dir, file);
+            if (statSync(filePath).isDirectory()) {
+                loadCommands(filePath);
+            } else if (file.endsWith(".ts")) {
+                const command: SlashCommand = require(filePath).default;
+                try {
+                    slashCommands.push(command.command);
+                    client.slashCommands.set(command.command.name, command);
+                } catch (error) {
+                    console.log(`Error loading slash command ${file}:`, error);
+                }
+            }
         }
-    }
+    };
 
-    const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
+    const slashCommandsDir = join(__dirname, "../slashCommands");
+    loadCommands(slashCommandsDir);
 
-    rest.put(Routes.applicationCommands(process.env.CLIENT_ID), {
-        body: slashCommands.map((command) => command.toJSON()),
-    })
-        .then((data: any) => {
-            console.log(`🔥 Successfully loaded ${data.length} slash command(s)`);
-        })
-        .catch((e) => {
-            console.log(e);
+    const rest = new REST({ version: "10" }).setToken(process.env.TOKEN!);
+
+    try {
+        const data = await rest.put(Routes.applicationCommands(process.env.CLIENT_ID!), {
+            body: slashCommands.map((command) => command.toJSON()),
         });
+        console.log(`🔥 Successfully loaded ${(data as any).length} slash command(s)`);
+    } catch (error) {
+        console.log("Error registering slash commands:", error);
+    }
 };

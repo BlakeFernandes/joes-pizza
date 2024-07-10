@@ -12,8 +12,8 @@ model Bank {
   id      Int    @id @default(autoincrement())
   
   bankId  Int
-  balance Float  @default(1000)
-  profit Int   @default(0)
+  balance String  @default("1000")
+  profit  String  @default("0")
 
   ownerId String
   owner   User   @relation(fields: [ownerId], references: [id])
@@ -23,8 +23,8 @@ model Bank {
 
 model User {
   id     String @id
-  wallet Int  @default(100)
-  level Int @default(0)
+  wallet String  @default("100")
+  level  Int    @default(0)
 
   Bank   Bank[]
   Shops  Shop[]
@@ -33,10 +33,15 @@ model User {
 model Shop {
   id          Int    @id @default(autoincrement())
   shopId      Int
-  amountOwned Int
+  amountOwned String
   ownerId     String
-  profit      Int    @default(0)
+  profit      String  @default("0")
   owner       User   @relation(fields: [ownerId], references: [id])
 
   @@unique([shopId, ownerId])
+}
+
+model Guild {
+  id               String  @id
+  defaultChannelId String?
 }

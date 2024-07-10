@@ -1,13 +1,15 @@
 import { prisma } from "~/index";
+import BigNumber from "bignumber.js";
+import { toBigNumber, toPrismaString } from "~/functions/numberUtils";
 
-async function hasMoney(userId: string, amount: number): Promise<boolean> {
+async function hasMoney(userId: string, amount: BigNumber): Promise<boolean> {
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {
         return false;
     }
 
-    return user.wallet >= amount;
+    return toBigNumber(user.wallet).gte(amount);
 }
 
 async function create(userId: string): Promise<void> {
@@ -18,59 +20,71 @@ async function create(userId: string): Promise<void> {
         update: {},
         create: {
             id: userId,
+            wallet: toPrismaString(new BigNumber(100)),
         },
     });
 }
 
-async function deposit(userId: string, amount: number): Promise<void> {
-    if (amount <= 0) {
+async function deposit(userId: string, amount: BigNumber): Promise<void> {
+    if (amount.lte(0)) {
         throw new Error("Deposit amount should be greater than 0.");
     }
 
-    await prisma.user.update({
-        where: { id: userId },
-        data: {
-            wallet: {
-                increment: amount,
-            },
-        },
-    });
-}
-
-async function withdraw(userId: string, amount: number): Promise<void> {
-    if (amount <= 0) {
-        throw new Error("Withdraw amount should be greater than 0.");
-    }
-
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-
-    if (user.wallet < amount) {
-        const missingAmount = amount - user.wallet;
-        throw new Error(`Insufficient funds. You need ${Math.round(missingAmount)} more coins.`);
-    }
-
-    await prisma.user.update({
-        where: { id: userId },
-        data: {
-            wallet: {
-                decrement: amount,
-            },
-        },
-    });
-}
-
-async function getBalance(userId: string): Promise<number> {
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {
         throw new Error("User not found.");
     }
 
-    return user.wallet;
+    const newBalance = toBigNumber(user.wallet).plus(amount);
+
+    await prisma.user.update({
+        where: { id: userId },
+        data: {
+            wallet: newBalance.toFixed(),
+        },
+    });
+}
+
+async function withdraw(userId: string, amount: BigNumber): Promise<void> {
+    if (amount.lte(0)) {
+        throw new Error("Withdraw amount should be greater than 0.");
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user) {
+        throw new Error("User not found.");
+    }
+
+    const userWallet = toBigNumber(user.wallet);
+
+    if (userWallet.lt(amount)) {
+        const missingAmount = amount.minus(userWallet);
+        throw new Error(`Insufficient funds. You need ${missingAmount.toFixed()} more coins.`);
+    }
+
+    const newBalance = userWallet.minus(amount);
+
+    await prisma.user.update({
+        where: { id: userId },
+        data: {
+            wallet: newBalance.toFixed(),
+        },
+    });
+}
+
+async function getBalance(userId: string): Promise<BigNumber> {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user) {
+        throw new Error("User not found.");
+    }
+
+    return toBigNumber(user.wallet);
 }
 
 async function getTopBalances(limit: number = 10) {
-    // Fetch users with their related Bank data
     const users = await prisma.user.findMany({
         include: {
             Bank: true,
@@ -78,11 +92,11 @@ async function getTopBalances(limit: number = 10) {
         take: limit * 2,
     });
 
-    const sortedUsers = users.sort((a, b) => {
-        const aBankBalance = a.Bank.length > 0 ? a.Bank[0].balance : 0;
-        const bBankBalance = b.Bank.length > 0 ? b.Bank[0].balance : 0;
+    const sortedUsers = users.sort((a: any, b: any) => {
+        const aBankBalance = a.Bank.length > 0 ? toBigNumber(a.Bank[0].balance) : toBigNumber(0);
+        const bBankBalance = b.Bank.length > 0 ? toBigNumber(b.Bank[0].balance) : toBigNumber(0);
 
-        return b.wallet + bBankBalance - (a.wallet + aBankBalance);
+        return b.wallet.plus(bBankBalance).minus(a.wallet.plus(aBankBalance)).toNumber();
     });
 
     return sortedUsers.slice(0, limit);

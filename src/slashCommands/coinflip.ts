@@ -1,26 +1,58 @@
-import { ChatInputCommandInteraction, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
-import formatNumber from "~/functions/numberUtils";
+import { ChatInputCommandInteraction, PermissionFlagsBits, SlashCommandBuilder, TextChannel } from "discord.js";
 import joeUser from "~/internal/joeUser";
-import { Command, SlashCommand } from "~/types";
+import { SlashCommand } from "~/types";
+import BigNumber from "bignumber.js";
+import { formatNumber, toBigNumber } from "~/functions/numberUtils";
+import { prisma } from "..";
 
 const userTimeMap = new Map<string, number>();
-const userBalanceMap = new Map<string, number>();
+const userBalanceMap = new Map<string, BigNumber>();
 
 const coinFlipCommand: SlashCommand = {
     command: new SlashCommandBuilder()
         .setName("coinflip")
         .setDescription("Flip a coin to win or lose coins")
-        .addIntegerOption((option) => option.setName("amount").setDescription("amount to flip"))
-        .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages),
-    execute: async (interaction) => {
-        const amount = interaction.options.getInteger("amount");
+        .addIntegerOption((option) => option.setName("amount").setDescription("Amount to flip").setRequired(true))
+        .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages) as SlashCommandBuilder,
+    execute: async (interaction: ChatInputCommandInteraction) => {
+        const guildId = interaction.guild?.id;
+        let channel = interaction.channel;
+
+        if (guildId) {
+            const guildSettings = await prisma.guild.findUnique({
+                where: { id: guildId },
+                select: { defaultChannelId: true },
+            });
+
+            if (guildSettings?.defaultChannelId) {
+                const defaultChannel = await interaction.guild?.channels.fetch(guildSettings.defaultChannelId);
+                if (defaultChannel?.isTextBased()) {
+                    channel = defaultChannel as TextChannel;
+                }
+            }
+        }
+
+        if (!channel?.isTextBased()) {
+            await interaction.reply({ content: "Couldn't find a valid text channel.", ephemeral: true });
+            return;
+        }
+        const amountValue = interaction.options.getInteger("amount");
+        if (amountValue === null) {
+            await interaction.reply("You must specify a valid amount to flip.");
+            return;
+        }
+        const amount = toBigNumber(amountValue);
+        if (amount.isNaN()) {
+            await interaction.reply("You must specify a valid amount to flip.");
+            return;
+        }
         const user = interaction.user;
 
         const hasMoney = await joeUser.hasMoney(user.id, amount);
-        const currentBalance = await joeUser.getBalance(user.id);
+        const currentBalance = toBigNumber(await joeUser.getBalance(user.id));
 
         if (!hasMoney) {
-            const missingAmount = amount - currentBalance;
+            const missingAmount = amount.minus(currentBalance);
             await interaction.reply(`Insufficient funds. You need ${formatNumber(missingAmount)} more coins.`);
             return;
         }
@@ -35,33 +67,29 @@ const coinFlipCommand: SlashCommand = {
 
         let win;
         if (isJackpot) {
-            win = 2 * amount;
+            win = amount.multipliedBy(2);
         } else {
-            win = result === "heads" ? amount : -amount;
+            win = result === "heads" ? amount : amount.negated();
         }
 
-        userBalanceMap.set(user.id, (userBalanceMap.get(user.id) ?? 0) + win);
+        userBalanceMap.set(user.id, (userBalanceMap.get(user.id) ?? toBigNumber(0)).plus(win));
         userTimeMap.set(user.id, Date.now());
 
-        setInterval(() => {
-            if (userTimeMap.get(user.id) && Date.now() - userTimeMap.get(user.id)! > 1000 * 30) {
-                userTimeMap.delete(user.id);
-                userBalanceMap.delete(user.id);
-            }
+        setTimeout(() => {
+            userTimeMap.delete(user.id);
+            userBalanceMap.delete(user.id);
         }, 1000 * 30);
 
-        if (win > 0) {
-            joeUser.deposit(user.id, amount);
+        if (win.isGreaterThan(0)) {
+            await joeUser.deposit(user.id, win);
         } else {
-            joeUser.withdraw(user.id, amount);
+            await joeUser.withdraw(user.id, amount);
         }
 
         if (isJackpot) {
             await interaction.reply(`🎉 JACKPOT! 🎉 You won ${formatNumber(win)} coins!`);
-        } else if (userBalanceMap.has(user.id)) {
-            await interaction.reply(`You flipped ${result} and ${win > 0 ? "won" : "lost"} ${formatNumber(amount)} coins.`);
         } else {
-            await interaction.reply(`You flipped ${result} and ${win > 0 ? "won" : "lost"} ${formatNumber(amount)} coins.`);
+            await interaction.reply(`You flipped ${result} and ${win.isGreaterThan(0) ? "won" : "lost"} ${formatNumber(amount.abs())} coins.`);
         }
     },
 };

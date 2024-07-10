@@ -1,8 +1,8 @@
-import { ChatInputCommandInteraction, EmbedBuilder, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
-import formatNumber from "~/functions/numberUtils";
+import { EmbedBuilder, PermissionFlagsBits, SlashCommandBuilder, TextChannel } from "discord.js";
 import { prisma } from "~/index";
 import joeUser from "~/internal/joeUser";
-import { Command, SlashCommand } from "~/types";
+import { SlashCommand } from "~/types";
+import { formatNumber, toBigNumber, toPrismaString } from "~/functions/numberUtils";
 
 export type ShopData = {
     id: number;
@@ -16,86 +16,85 @@ export const shops: ShopData[] = [
     {
         id: 1,
         name: "🍋 Little Timmy's Lemonade Stand",
-        price: 5_000,
+        price: 1000,
         priceExponent: 1.1,
-        incomePerSecond: 20,
+        incomePerSecond: 10,
     },
     {
         id: 2,
         name: "🌭 Bunnings Sausage Sizzle",
-        price: 30_000,
-        priceExponent: 1.2,
-        incomePerSecond: 100,
+        price: 5000,
+        priceExponent: 1.15,
+        incomePerSecond: 50,
     },
     {
         id: 3,
         name: "🍦 Mr Whippys",
-        price: 150_000,
-        priceExponent: 1.25,
-        incomePerSecond: 500,
+        price: 20000,
+        priceExponent: 1.2,
+        incomePerSecond: 200,
     },
     {
         id: 4,
         name: "🍔 Maccas",
-        price: 600_000,
-        priceExponent: 1.3,
-        incomePerSecond: 2_000,
+        price: 80000,
+        priceExponent: 1.25,
+        incomePerSecond: 800,
     },
     {
         id: 5,
         name: "🍩 Dunkin' Donuts",
-        price: 2_000_000,
-        priceExponent: 1.35,
-        incomePerSecond: 5_000,
+        price: 320000,
+        priceExponent: 1.3,
+        incomePerSecond: 3200,
     },
     {
         id: 6,
         name: "🏪 Generic Convenience Store",
-        price: 5_000_000,
-        priceExponent: 1.4,
-        incomePerSecond: 12_500,
+        price: 1280000,
+        priceExponent: 1.35,
+        incomePerSecond: 12800,
     },
     {
         id: 7,
         name: "🎬 Hoyts",
-        price: 12_000_000,
-        priceExponent: 1.45,
-        incomePerSecond: 25_000,
+        price: 5120000,
+        priceExponent: 1.4,
+        incomePerSecond: 51200,
     },
     {
         id: 8,
         name: "✈️ Generic Airline",
-        price: 25_000_000,
-        priceExponent: 1.5,
-        incomePerSecond: 50_000,
+        price: 20480000,
+        priceExponent: 1.45,
+        incomePerSecond: 204800,
     },
     {
         id: 9,
         name: "🚀 Generic Spaceships",
-        price: 50_000_000,
-        priceExponent: 1.55,
-        incomePerSecond: 100_000,
+        price: 81920000,
+        priceExponent: 1.5,
+        incomePerSecond: 819200,
     },
     {
         id: 10,
         name: "🍕 Joe's Pizza",
-        price: 100_000_000,
-        priceExponent: 1.6,
-        incomePerSecond: 200_000,
+        price: 327680000,
+        priceExponent: 1.55,
+        incomePerSecond: 3276800,
     },
 ];
-
 
 const shopCommand: SlashCommand = {
     command: new SlashCommandBuilder()
         .setName("shop")
         .setDescription("View Shops")
-        .addStringOption((option) => option.setName("option").setDescription("Option to execute").setAutocomplete(true))
+        .addStringOption((option) => option.setName("option").setDescription("Option to execute").setAutocomplete(true).setRequired(false))
         .addStringOption((option) => option.setName("type").setDescription("Select the shop type").setAutocomplete(true).setRequired(false))
-        .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages),
+        .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages) as SlashCommandBuilder,
     autocomplete: async (interaction) => {
         const focusedOption = interaction.options.getFocused(true);
-        let choices;
+        let choices: any[] = [];
 
         if (focusedOption.name === "option") {
             choices = ["view", "buy"];
@@ -105,12 +104,33 @@ const shopCommand: SlashCommand = {
             choices = shops.map((shop) => shop.name);
         }
 
-        const filtered = choices?.filter((choice) => choice.startsWith(focusedOption.value));
+        const filtered = choices.filter((choice: string) => choice.startsWith(focusedOption.value));
 
-        await interaction.respond(filtered.map((choice) => ({ name: choice, value: choice })));
+        await interaction.respond(filtered.map((choice: any) => ({ name: choice, value: choice })));
     },
     execute: async (interaction) => {
-        const option = interaction.options.getString("option")!;
+        const guildId = interaction.guild?.id;
+        let channel = interaction.channel;
+
+        if (guildId) {
+            const guildSettings = await prisma.guild.findUnique({
+                where: { id: guildId },
+                select: { defaultChannelId: true },
+            });
+
+            if (guildSettings?.defaultChannelId) {
+                const defaultChannel = await interaction.guild?.channels.fetch(guildSettings.defaultChannelId);
+                if (defaultChannel?.isTextBased()) {
+                    channel = defaultChannel as TextChannel;
+                }
+            }
+        }
+
+        if (!channel?.isTextBased()) {
+            await interaction.reply({ content: "Couldn't find a valid text channel.", ephemeral: true });
+            return;
+        }
+        const option = interaction.options.getString("option");
 
         const userShops = await prisma.shop.findMany({
             where: {
@@ -118,23 +138,23 @@ const shopCommand: SlashCommand = {
             },
         });
 
-        if (option === "view") {
+        if (!option || option === "view") {
             const embed = new EmbedBuilder().setTitle("Shop").setDescription("Buy stuff to make more money!");
 
-            const highestOwnedShopId = userShops.reduce((max, shop) => Math.max(max, shop.shopId), 0);
+            const highestOwnedShopId = userShops.reduce((max: number, shop: { shopId: number }) => Math.max(max, shop.shopId), 0);
 
             for (const shop of shops) {
                 if (shop.id <= highestOwnedShopId + 1) {
-                    const userShop = userShops.find((us) => us.shopId === shop.id);
-                    const price = shop.price * Math.pow(shop.priceExponent, userShop?.amountOwned ?? 0);
-                    const incomePerSecond = shop.incomePerSecond * (userShop?.amountOwned ?? 0);
+                    const userShop = userShops.find((us: { shopId: number }) => us.shopId === shop.id);
+                    const price = toBigNumber(shop.price).times(toBigNumber(shop.priceExponent).pow(userShop?.amountOwned ?? 0));
+                    const incomePerSecond = toBigNumber(shop.incomePerSecond).times(userShop?.amountOwned ?? 0);
 
                     embed.addFields({
                         name: `\`\`${shop.name}\`\``,
-                        value: `Price: $${formatNumber(price)} ($${formatNumber(shop.price)} @ x${shop.priceExponent}) 
-        Income Per Second: $${formatNumber(incomePerSecond)} ($${formatNumber(shop.incomePerSecond)})
-        Owned: ${formatNumber(userShop?.amountOwned ?? 0)}
-        Profit: $${formatNumber(userShop?.profit ?? 0)}`,
+                        value: `Price: $${formatNumber(price)} ($${formatNumber(toBigNumber(shop.price))} @ x${shop.priceExponent}) 
+        Income Per Second: $${formatNumber(incomePerSecond)} ($${formatNumber(toBigNumber(shop.incomePerSecond))})
+        Owned: ${formatNumber(toBigNumber(userShop?.amountOwned ?? 0))}
+        Profit: $${formatNumber(toBigNumber(userShop?.profit ?? 0))}`,
                     });
                 }
             }
@@ -152,19 +172,19 @@ const shopCommand: SlashCommand = {
                 return;
             }
 
-            const userShop = userShops.filter((userShop) => userShop.shopId === shop.id)[0];
+            const userShop = userShops.filter((userShop: { shopId: number }) => userShop.shopId === shop.id)[0];
             const amountOwned = userShop?.amountOwned ?? 0;
 
-            const price = shop.price * Math.pow(shop.priceExponent, amountOwned);
-            const currentBalance = await joeUser.getBalance(interaction.user.id);
+            const price = toBigNumber(shop.price).times(toBigNumber(shop.priceExponent).pow(amountOwned));
+            const currentBalance = toBigNumber(await joeUser.getBalance(interaction.user.id));
 
-            if (price > currentBalance) {
-                const missingAmount = price - currentBalance;
+            if (price.gt(currentBalance)) {
+                const missingAmount = price.minus(currentBalance);
                 await interaction.reply(`Insufficient funds. You need $${formatNumber(missingAmount)} more to buy \`\`${shop.name}\`\`.`);
                 return;
             }
 
-            joeUser.withdraw(interaction.user.id, price);
+            await joeUser.withdraw(interaction.user.id, price);
 
             await prisma.shop.upsert({
                 where: {
@@ -179,7 +199,7 @@ const shopCommand: SlashCommand = {
                 create: {
                     ownerId: interaction.user.id,
                     shopId: shop.id,
-                    amountOwned: 1,
+                    amountOwned: toBigNumber(1).toString(),
                 },
             });
 
@@ -190,14 +210,14 @@ const shopCommand: SlashCommand = {
 
 setInterval(async () => {
     const userShops = await prisma.shop.findMany();
-    userShops.forEach(async (userShop) => {
+    for (const userShop of userShops) {
         const user = userShop.ownerId;
-        const amountOwned = userShop.amountOwned;
-        const incomePerSecond = shops.filter((shop2) => shop2.id === userShop.shopId)[0].incomePerSecond;
+        const amountOwned = toBigNumber(userShop.amountOwned);
+        const incomePerSecond = shops.find((shop2) => shop2.id === userShop.shopId)?.incomePerSecond ?? 0;
 
-        const out = amountOwned * incomePerSecond;
+        const out = amountOwned.times(incomePerSecond);
 
-        if (out > 0) {
+        if (out.gt(0)) {
             await joeUser.deposit(user, out);
             await prisma.shop.update({
                 where: {
@@ -207,13 +227,11 @@ setInterval(async () => {
                     },
                 },
                 data: {
-                    profit: {
-                        increment: out,
-                    },
+                    profit: toPrismaString(toBigNumber(userShop.profit).plus(out)),
                 },
             });
         }
-    });
+    }
 }, 1000);
 
 console.log("🍕 Shop Interval Started!");
