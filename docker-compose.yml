@@ -1,13 +1,13 @@
-version: '3.9'
+version: "3.9"
 
 services:
-  postgres:
-    image: postgres:14-alpine
-    ports:
-      - 5432:5432
-    volumes:
-      - ~/apps/postgres:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_PASSWORD=yes
-      - POSTGRES_USER=yes
-      - POSTGRES_DB=yes
+    postgres:
+        image: postgres:14-alpine
+        ports:
+            - 5432:5432
+        volumes:
+            - ~/apps/postgres:/var/lib/postgresql/data
+        environment:
+            - POSTGRES_PASSWORD=yes
+            - POSTGRES_USER=yes
+            - POSTGRES_DB=yes
